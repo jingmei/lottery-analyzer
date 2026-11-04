@@ -21,15 +21,16 @@
 - `/api/push` 在未配置密钥或密钥错误时一律返回 403；空 token 不能绕过。
 - 如果密钥疑似泄露：重新生成随机值 → `wrangler secret put EDGE_PUSH_TOKEN` → 更新本机 `.env` → 重启 `server.js` → 在 Cloudflare 后台撤销旧 API Token。
 
-## 已启用 / 待生效的安全设置
+## 已启用的安全设置
 
-- [x] Cloudflare *Always Use HTTPS*：HTTP 请求 301 跳 HTTPS；Minimum TLS 1.2（已在线验证）。
-- [x] `/api/push` 鉴权：未配置密钥或密钥错误一律 403（已在线验证）。
-- [x] `/.well-known/security.txt` 提供联系与隐私策略入口（已在线验证 200）。
-- [ ] Worker 响应头：HSTS (`max-age=31536000`)、`X-Content-Type-Options: nosniff`、`Referrer-Policy`、`X-Frame-Options: SAMEORIGIN`；HTML 短时缓存（`max-age=600, stale-while-revalidate`），API 保持 `no-store`。
+- [x] Cloudflare *Always Use HTTPS*：HTTP 请求 301 跳 HTTPS；Minimum TLS 1.2。
+- [x] `/api/push` 鉴权：未配置密钥或密钥错误一律 403；空 token 不能绕过。
+- [x] `/.well-known/security.txt` 提供联系与隐私策略入口。
+- [x] Worker 响应头：HSTS (`max-age=31536000`)、`X-Content-Type-Options: nosniff`、`Referrer-Policy`、`X-Frame-Options: SAMEORIGIN`；HTML 短时缓存（`max-age=600, stale-while-revalidate`），API 保持 `no-store`。
+- [x] 2026-11-05 重新部署（Version `ce1414e3`）后，`curl -I https://maicaipiao.top/` 已实测上述响应头全部返回，数据接口与 `/api/push` 回归通过。
 
-> **重要**：Workers Assets 的 `run_worker_first` 默认 `false`，此时 Cloudflare 会直接返回静态资源、**根本不执行 Worker**，上面那些写在 `worker.js` 里的响应头就会全部失效。`wrangler.toml` 已设为 `run_worker_first = true`，但**需要重新执行一次 `wrangler deploy` 才会在线生效**。
-> 验证方法：`curl -I https://<域名>/` 应能看到 `Strict-Transport-Security` 与 `Cache-Control: public, max-age=600...`；若只看到 `max-age=0, must-revalidate`，说明 Worker 没被执行。
+> **重要（fork 后也别删）**：Workers Assets 的 `run_worker_first` 默认 `false`，此时 Cloudflare 会直接返回静态资源、**根本不执行 Worker**，上面那些写在 `worker.js` 里的响应头就会全部失效。`wrangler.toml` 必须保留 `run_worker_first = true`，并且**每次改完配置都要重新 `wrangler deploy` 才在线生效**。
+> 验证方法：`curl -I https://<你的域名>/` 应能看到 `Strict-Transport-Security` 与 `Cache-Control: public, max-age=600...`；若只看到 `max-age=0, must-revalidate`，说明 Worker 没被执行。
 
 ## 报告安全问题
 
