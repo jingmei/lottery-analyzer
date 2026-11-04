@@ -63,6 +63,16 @@ Fine-grained token 也能用，但要手动指定仓库并开 `Contents: Read an
 
 之后日常更新直接 `git push` 即可（首次已用 `-u` 绑定）。
 
+> **环境注意（2026-11-05 实测）**：这台机器上 `git` 装在 WorkBuddy 自带的
+> `PortableGit\mingw64\bin\` 里，**只注入 Git Bash 会话**，双击 `.bat` 启动的普通
+> PowerShell 里 `git` 不在 PATH。旧版脚本因此会在第一个 `git` 命令处直接终止，
+> 表现为 `git remote -v` 为空、分支仍叫 `master`、PAT 白输一次。
+> 现版 `push-github.ps1` 会自动搜索并定位 `git.exe`（WorkBuddy PortableGit +
+> 标准 `C:\Program Files\Git` 等路径），用绝对路径调用，并把该目录临时加入 PATH；
+> 仓库存在性检查也改用 Windows 自带的 `curl.exe`，不受 PowerShell 代理设置影响。
+> 脚本内文字刻意保持英文，因为 PowerShell 5.1 会把无 BOM 的 UTF-8 脚本按 ANSI 解析，
+> 中文会乱码。
+
 ## 3b. 手动推送（备选）
 
 ```bash
@@ -135,3 +145,25 @@ git grep -nEi 'PUSH_TOKEN=[^$<]|api[_-]?token|password|cfut_|ghp_|[A-Fa-f0-9]{40
 ## 8. 免费推广
 
 见 [PROMOTION.md](PROMOTION.md)。
+
+## 9. 故障排查速查表
+
+| 现象 | 原因 | 处理 |
+|---|---|---|
+| 脚本显示 `ACTION REQUIRED: remote repository does NOT exist` | 仓库还没建 / API 检查时还没生效 | 去 https://github.com/new 建空 Public 仓库，等几秒后重跑 |
+| `git remote -v` 为空、分支还是 `master` | 脚本在调用 git 之前就崩了（旧版 git 不在 PATH） | 用现版脚本；或手动 `git remote add origin ...` + `git branch -M main` |
+| 显示 `ERROR: git.exe NOT FOUND` | 连 PortableGit 也没找到 | 安装 Git for Windows，或在 Git Bash 里手动执行第 3b 步 |
+| `FAILED` + `Authentication failed` | PAT 没勾 `repo` / 已过期 / 复制时少了字符 | 重新生成 classic PAT 勾 `repo`，重新粘贴 |
+| `FAILED` + `Repository not found` | 仓库名不是 `lottery-analyzer`，或 PAT 无该仓库权限 | 核对 `git remote -v` 与 GitHub 上的仓库名 |
+| `FAILED` + 超时 / `Could not resolve host` | 网络或代理 | 换网络；必要时去掉代理后重试，不要改 remote URL |
+| 推送成功但线上站点没变 | 只推了 GitHub，没重新部署 Worker | 跑 `deploy-worker.bat` |
+
+自检命令（在任何 git 终端里）：
+
+```bash
+git remote -v                 # 应显示 origin -> https://github.com/jingmei/lottery-analyzer.git
+git branch -vv                # 应显示 * main
+git status --short            # 应为空
+curl -s -o /dev/null -w "%{http_code}" https://api.github.com/repos/jingmei/lottery-analyzer   # 200
+```
+
