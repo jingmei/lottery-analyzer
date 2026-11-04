@@ -145,9 +145,10 @@ git grep -nEi 'PUSH_TOKEN=[^$<]|api[_-]?token|password|cfut_|ghp_|[A-Fa-f0-9]{40
 
 部署后线上首页页脚与 `/about.html` 会显示 `github.com/jingmei/lottery-analyzer`，这也是华为 / 腾讯申诉时「代码可审查」的佐证。
 
-## 8. 免费推广
+## 8. 国内镜像与免费推广
 
-见 [PROMOTION.md](PROMOTION.md)。
+- **Gitee 国内代码镜像**：见 [GITEE_SETUP.md](GITEE_SETUP.md)（Gitee 用户名 `respectfully-mei`；Gitee Pages 已下线，仅作代码镜像）。
+- **免费推广渠道**：见 [PROMOTION.md](PROMOTION.md)。
 
 ## 9. 故障排查速查表
 

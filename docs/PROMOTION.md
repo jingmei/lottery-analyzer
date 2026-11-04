@@ -16,6 +16,7 @@
 | Releases | 首个版本打 tag `v1.0.0`，写清功能与合规说明 |
 | Discussions / Issues | 开启，作为反馈与申诉联系入口 |
 | 提交到 Awesome 列表 | 搜索 `awesome-cn`、`HelloGitHub` 等收录开源项目的仓库，按格式提 PR |
+| Gitee 国内镜像 | https://gitee.com/respectfully-mei/lottery-analyzer （待导入，步骤见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
 
 ## 二、渠道清单（按优先级）
 
@@ -30,7 +31,7 @@
 | **SegmentFault 思否** | 问答 / 文章 | 技术向 |
 | **小众软件** | 「软件议题 / 讨论分享」 | 工具类站点，用户精准 |
 | **少数派** | 投稿（需高质量文章） | 日 IP 高，可获首页推荐 |
-| **开源中国 / Gitee** | 发布项目 + 镜像仓库 | 国内访问快，可做 GitHub 镜像 |
+| **开源中国 / Gitee** | 发布项目 + 代码镜像 | 国内访问快；镜像地址与步骤见 [GITEE_SETUP.md](GITEE_SETUP.md)（Pages 已下线，只发仓库、不发网页） |
 
 ### B. 内容平台（SEO 长期生效，第 2~4 天）
 
