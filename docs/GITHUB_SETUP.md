@@ -70,8 +70,11 @@ Fine-grained token 也能用，但要手动指定仓库并开 `Contents: Read an
 > 现版 `push-github.ps1` 会自动搜索并定位 `git.exe`（WorkBuddy PortableGit +
 > 标准 `C:\Program Files\Git` 等路径），用绝对路径调用，并把该目录临时加入 PATH；
 > 仓库存在性检查也改用 Windows 自带的 `curl.exe`，不受 PowerShell 代理设置影响。
-> 脚本内文字刻意保持英文，因为 PowerShell 5.1 会把无 BOM 的 UTF-8 脚本按 ANSI 解析，
-> 中文会乱码。
+> 两个脚本内文字刻意保持**纯 ASCII 英文**：PowerShell 5.1 会把无 BOM 的 UTF-8 脚本按
+> ANSI 解析，中文会乱码；**`.bat` 更严重** —— cmd 默认按 GBK 读取批处理文件，
+> UTF-8 中文字节会把 `echo` 行拆成 `'cho'` / `'rerequisites'` 等碎片并报
+> 「不是内部或外部命令」，`chcp 65001` 救不回已经读乱的行。中文说明一律放在对话里，
+> 不要写进 `.bat` / `.ps1`。
 
 ## 3b. 手动推送（备选）
 
@@ -150,6 +153,7 @@ git grep -nEi 'PUSH_TOKEN=[^$<]|api[_-]?token|password|cfut_|ghp_|[A-Fa-f0-9]{40
 
 | 现象 | 原因 | 处理 |
 |---|---|---|
+| `'cho' 不是内部或外部命令` / 中文乱码 / `綍鏂函欢` | `.bat` 含 UTF-8 中文，被 cmd 按 GBK 拆断命令 | 已改为纯 ASCII；任何 `.bat` 都不要写中文 |
 | 脚本显示 `ACTION REQUIRED: remote repository does NOT exist` | 仓库还没建 / API 检查时还没生效 | 去 https://github.com/new 建空 Public 仓库，等几秒后重跑 |
 | `git remote -v` 为空、分支还是 `master` | 脚本在调用 git 之前就崩了（旧版 git 不在 PATH） | 用现版脚本；或手动 `git remote add origin ...` + `git branch -M main` |
 | 显示 `ERROR: git.exe NOT FOUND` | 连 PortableGit 也没找到 | 安装 Git for Windows，或在 Git Bash 里手动执行第 3b 步 |
