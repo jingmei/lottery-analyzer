@@ -74,7 +74,9 @@ git push -u origin main
 
 若 22 端口被阻断，用 `ssh.github.com:443`（在 `~/.ssh/config` 里配置 `Host github.com / HostName ssh.github.com / Port 443 / User git`），并把主机密钥加入 `known_hosts`。
 
-> 当前环境实测：`api.github.com` 可达，但 `github.com` 的 HTTPS CONNECT 被代理拒绝（502），`git push` 需在能正常访问 GitHub 的网络下执行，或配置可用代理。
+> 网络说明：前期实测 `api.github.com` 可达、但 `github.com` 的 HTTPS CONNECT 被代理拒绝（502）。
+> **2026-11-05 复测已恢复**：`api.github.com` 200、`github.com` 200、`git ls-remote https://github.com/git/git.git HEAD` 成功，可直接按第 3 步推送。
+> 若以后又遇到 502 / 超时，换网络或配置可用代理后再试，不要改 remote URL。
 
 ## 5. 推送后的仓库设置（提升可信度与曝光）
 
