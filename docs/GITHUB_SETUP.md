@@ -3,72 +3,94 @@
 > **重要**：GitHub 自 2021-08-13 起已**禁用账号密码推送 Git**，必须用 **Personal Access Token (PAT)** 或 **SSH Key**。
 > 请勿把账号密码或 Token 发在聊天里、写进文件或提交进仓库。
 
-## 0. 待确认的一项
+## 0. 已确认的信息
 
-你提供的 `j44905@163.com` 是**登录邮箱**，不是 GitHub 用户名；实测 `api.github.com/users/j44905` 返回 **404**，所以页面里暂未放具体仓库链接（避免死链影响申诉审核）。
+| 项 | 值 |
+|---|---|
+| GitHub 用户名 | **`jingmei`**（截图中 `jingmei (jingmei)`，个人主页 https://github.com/jingmei ） |
+| 登录邮箱 | `j44905@163.com`（账号已验证邮箱，用作 git 提交邮箱） |
+| 仓库名 | `lottery-analyzer` |
+| 仓库地址 | https://github.com/jingmei/lottery-analyzer |
+| 当前状态 | 账号 `public_repos = 0`，`api.github.com/repos/jingmei/lottery-analyzer` 返回 **404 → 仓库尚未创建** |
 
-👉 请确认你的 GitHub 用户名（登录 GitHub 后看个人主页地址 `github.com/xxxxx` 中的 `xxxxx`），下文用 `<USER>` 代替。确认后需全局替换：
-
-```
-lottery-analyzer.html          # 页脚「开源代码」链接（当前已临时移除）
-cf-worker/public/about.html    # 开源仓库与 Issues 链接
-README.md / docs/*.md          # 仓库地址
-```
+> 之前 `api.github.com/users/j44905` 返回 404，是因为那是**登录邮箱不是用户名**；现已按真实用户名 `jingmei` 更新全部文档、页面与 about 页链接。本地 `git user.name` 也已由 `j44905` 改为 `jingmei`。
 
 ## 1. 创建仓库（网页，最省事）
 
-1. 登录 GitHub → 右上角 `+` → **New repository**
+1. 打开 **https://github.com/new**
 2. Repository name：`lottery-analyzer`
 3. Description：`单文件零依赖的彩票历史开奖数据统计分析工具（仅供数据研究，不构成投注建议）`
 4. 选 **Public**，**不要**勾选 "Add a README file" / "Add .gitignore" / "Choose a license"（本地已有，勾选会产生冲突）
-5. 点 Create repository
+5. 点 **Create repository**
 
 ## 2. 生成 PAT
 
-**Fine-grained token（推荐）**：
-Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token
-- Resource owner：你的账号
-- Repository access：Only select repositories → `lottery-analyzer`
-- Permissions：Contents `Read and write`、Metadata `Read`（必填）
-- 设置有效期，生成后**只显示一次**，立刻保存好
+**PAT 不在「Password and authentication」页里**，它在 Settings 左侧栏**最底部**：
 
-**或 Classic token**：`Generate new token (classic)` → 勾选 `repo` → 生成。
+```
+右上角头像 → Settings → 左侧栏拉到最底 → Developer settings
+  → Personal access tokens → Tokens (classic)
+  → 「Generate new token ▾」→ 「Generate new token (classic)」
+```
 
-## 3. 本地推送
+直达链接：**https://github.com/settings/tokens**
 
-仓库已在本地初始化并完成首次提交。只需：
+填写：
+
+| 字段 | 填什么 |
+|---|---|
+| Note | `lottery-analyzer-push`（仅备注，随便起名） |
+| Expiration | 建议 `90 days`（到期换新，比 No expiration 安全） |
+| Select scopes | 勾选 **`repo`**（勾顶层那个即可，会自动带上子项） |
+
+点 **Generate token** → 页面显示 `ghp_...` → **立刻复制**（只显示一次，刷新后不再出现）。
+
+> ⚠️ 不要把 PAT 贴进聊天、写进 `.env`、写进 remote URL 或提交进仓库。
+> 本仓库的 `push-github.bat` 会**隐藏输入** PAT，不回显、不落盘、跑完清空。
+
+Fine-grained token 也能用，但要手动指定仓库并开 `Contents: Read and write` + `Metadata: Read`，比 classic 容易配错，建议直接用 classic。
+
+## 3. 一键推送（推荐）
+
+双击 **`push-github.bat`**：
+
+1. 先检查远端仓库是否已创建（没建会提示去 https://github.com/new 并退出）；
+2. 隐藏输入 PAT（`Read-Host -AsSecureString`，不回显）；
+3. 自动设置 `user.name=jingmei` / `user.email`、`origin`、把分支改名为 `main`；
+4. 通过 `GIT_ASKPASS` + 进程环境变量把 PAT 传给 git，**不写入 `.git/config`、不写任何文件**，结束立即清空；
+5. 执行 `git push -u origin main`；
+6. 成功后提示下一步。
+
+之后日常更新直接 `git push` 即可（首次已用 `-u` 绑定）。
+
+## 3b. 手动推送（备选）
 
 ```bash
 cd C:\Users\jingmei\WorkBuddy\2026-10-29-16-28-04
 
-# 配置提交身份（如尚未配置）
-git config user.name  "<你的名字或用户名>"
+git config user.name  "jingmei"
 git config user.email "j44905@163.com"
 
-# 绑定远程（把 <USER> 换成真实用户名）
-git remote add origin https://github.com/<USER>/lottery-analyzer.git
+git remote add origin https://github.com/jingmei/lottery-analyzer.git
 git branch -M main
 git push -u origin main
 ```
 
-推送时若弹出登录：
-- 用户名：GitHub **用户名**（不是邮箱）
-- 密码：**粘贴 PAT**（不是账号密码）
-
-Windows 建议启用凭据管理，避免每次输入：
+弹出登录时：用户名填 **`jingmei`**（不是邮箱），密码**粘贴 PAT**（不是账号密码）。
+Windows 可启用凭据管理避免每次输入：
 
 ```bash
 git config --global credential.helper manager
 ```
 
-> 不要使用 `https://<TOKEN>@github.com/...` 这种把 Token 写进 remote URL 的方式——它会明文留在 `.git/config` 里。
+> 不要用 `https://<TOKEN>@github.com/...` 这种把 Token 写进 remote URL 的方式——它会明文留在 `.git/config` 里。
 
-## 4. SSH 备选（国内网络更稳时可用）
+## 4. SSH 备选（国内网络不稳时可用）
 
 ```bash
 ssh-keygen -t ed25519 -C "j44905@163.com"
-# 把 ~/.ssh/id_ed25519.pub 的内容加到 GitHub → Settings → SSH and GPG keys
-git remote set-url origin git@github.com:<USER>/lottery-analyzer.git
+# 把 ~/.ssh/id_ed25519.pub 加到 GitHub → Settings → SSH and GPG keys
+git remote set-url origin git@github.com:jingmei/lottery-analyzer.git
 git push -u origin main
 ```
 
@@ -94,16 +116,22 @@ git push -u origin main
 ## 6. 推送前的安全自检（**必做**）
 
 ```bash
-# 确认没有敏感文件被跟踪
 git status --short
 git ls-files | grep -Ei '\.env$|token|secret|\.tmp$|archive|live-data'
-
-# 扫描暂存区是否含密钥/密码
-git grep -nEi 'PUSH_TOKEN=[^$<]|api[_-]?token|password|cfut_|[A-Fa-f0-9]{40,}' -- . || echo "未发现明文凭据"
+git grep -nEi 'PUSH_TOKEN=[^$<]|api[_-]?token|password|cfut_|ghp_|[A-Fa-f0-9]{40,}' -- . || echo "未发现明文凭据"
 ```
 
-预期：`git ls-files` 不出现 `.env`、`_archive/`、`live-data.json`、`*.tmp`；`git grep` 无命中（`.env.example` 中的占位说明除外）。
+预期：`git ls-files` 不出现 `.env`、`_archive/`、`live-data.json`、`*.tmp`；`git grep` 无命中（`.env.example` 的占位说明除外）。
+`push-github.ps1` 里出现的 `GH_PAT` 只是**环境变量名**，不含任何真实 Token。
 
-## 7. 免费推广
+## 7. 推送后：让线上页面同步仓库链接
+
+`lottery-analyzer.html` 页脚和 `cf-worker/public/about.html` 已加上真实仓库链接，但 **Cloudflare Worker 的静态资源需要重新部署才会在 `maicaipiao.top` 生效**：
+
+双击 **`deploy-worker.bat`**（隐藏输入 Cloudflare API Token）→ 自动 `wrangler deploy`。
+
+部署后线上首页页脚与 `/about.html` 会显示 `github.com/jingmei/lottery-analyzer`，这也是华为 / 腾讯申诉时「代码可审查」的佐证。
+
+## 8. 免费推广
 
 见 [PROMOTION.md](PROMOTION.md)。

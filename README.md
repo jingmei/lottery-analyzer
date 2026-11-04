@@ -7,6 +7,9 @@
 [![Zero dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](README.md)
 [![Single file](https://img.shields.io/badge/frontend-single%20html-orange.svg)](lottery-analyzer.html)
 
+> **开源仓库**：https://github.com/jingmei/lottery-analyzer 　·　 **在线站点**：https://maicaipiao.top
+> 代码以 MIT 许可证开源，欢迎审查与反馈；仓库 Issues 也可用于风险提示误报申诉。
+
 ---
 
 ## ⚠️ 免责声明（请先读）
