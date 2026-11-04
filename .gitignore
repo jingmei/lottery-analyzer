@@ -1,0 +1,45 @@
+# ---------- 密钥与本地配置（最重要） ----------
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+*.tmp
+.cf_token*
+_cf_token*
+.push_token
+secrets/
+wrangler.prod.toml
+
+# ---------- 历史归档（弃用方案 / 调试脚本 / 日志 / 旧凭据） ----------
+_archive/
+
+# ---------- Node / Wrangler ----------
+node_modules/
+.wrangler/
+npm-debug.log*
+yarn-error.log*
+package-lock.json
+pnpm-lock.yaml
+dist/
+
+# ---------- 运行时生成物 ----------
+live-data.json
+*.log
+nul
+_edge_home.tmp
+
+# ---------- 站点所有者的域名验证文件（fork 后请用你自己的） ----------
+cf-worker/public/*.txt
+!cf-worker/public/.well-known/security.txt
+/9dba7578e73eaab205b859d857f3058d.txt
+/a1bca2653234781890de912cc902307b.txt
+
+# ---------- 本地工具与会话数据（绝不上公开仓库） ----------
+.workbuddy/
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+*.swp

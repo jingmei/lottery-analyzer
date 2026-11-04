@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>关于本站 · 隐私与免责说明</title>
+<meta name="description" content="彩票历史数据统计分析工具的站点性质、隐私保护与免责声明。本站为个人开源非商业项目，不销售彩票、不代购、不收费、不含广告。">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px;
+    background: #f5f7fa; color: #24303f;
+    font: 16px/1.85 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #2c3e6b, #43558f);
+    color: #fff; border-radius: 14px; padding: 28px 26px; margin-bottom: 22px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.5em; }
+  header p { margin: 0; opacity: .88; font-size: .92em; }
+  nav a {
+    display: inline-block; margin: 14px 10px 0 0; padding: 5px 14px;
+    background: rgba(255,255,255,.16); color: #fff; border-radius: 20px;
+    text-decoration: none; font-size: .88em;
+  }
+  nav a:hover { background: rgba(255,255,255,.3); }
+  section {
+    background: #fff; border: 1px solid #e3e8ef; border-radius: 12px;
+    padding: 22px 26px; margin-bottom: 18px;
+  }
+  h2 { margin: 0 0 14px; font-size: 1.15em; color: #2c3e6b; border-left: 4px solid #43558f; padding-left: 10px; }
+  h3 { margin: 18px 0 6px; font-size: 1em; color: #34495e; }
+  p, li { margin: 6px 0; }
+  ul { padding-left: 22px; }
+  strong { color: #1d2b45; }
+  .tag { display: inline-block; background: #eef2fb; color: #34495e; border-radius: 6px; padding: 2px 9px; margin: 3px 5px 3px 0; font-size: .88em; }
+  .warn { background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 10px; padding: 14px 18px; color: #6b5218; }
+  a { color: #2f5bb7; }
+  footer { text-align: center; color: #7a8698; font-size: .86em; margin-top: 26px; }
+  code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>关于本站 · 隐私与免责说明</h1>
+  <p>彩票历史开奖数据统计分析工具 —— 个人开源、非商业、非官方的数据研究项目</p>
+  <nav>
+    <a href="#about">站点性质</a>
+    <a href="#privacy">隐私说明</a>
+    <a href="#disclaimer">免责声明</a>
+    <a href="/">返回首页</a>
+  </nav>
+</header>
+
+<section id="about">
+  <h2>一、站点性质与用途</h2>
+  <p>本站是一个<strong>个人开源的历史开奖数据整理与统计分析工具</strong>，用于对已公开的开奖结果做频次统计、走势图表、历史对照与拍照录入等数据研究。全部代码开源，可自行审查。</p>
+
+  <h3>数据来源</h3>
+  <p>开奖信息整理自中国福利彩票、中国体育彩票<strong>官方公开发布</strong>的历史开奖结果，仅作数据引用与统计分析。本站<strong>与各级彩票发行、销售机构没有任何关联，也不是官方网站</strong>；数据如有出入，请以官方公布为准。</p>
+
+  <h3>本站明确不提供</h3>
+  <p>
+    <span class="tag">彩票销售</span><span class="tag">代购/合买</span><span class="tag">充值与兑奖</span>
+    <span class="tag">收费服务</span><span class="tag">会员注册</span><span class="tag">广告投放</span>
+    <span class="tag">投注引导</span><span class="tag">中奖承诺</span>
+  </p>
+  <p>页面中的号码组合是统计模型基于历史频次生成的<strong>数据展示结果</strong>，用于研究对照，<strong>不构成任何投注建议</strong>，也不代表真实中奖概率更高。本站不含任何商业推广、跳转购买链接或诱导购彩内容。</p>
+
+  <h3>技术与部署</h3>
+  <p>前端为单文件静态页面（零后端依赖），静态资源由 Cloudflare Workers 边缘节点提供；开奖数据由部署者本机从官方公开接口抓取后写入边缘 KV 缓存。页面内嵌历史快照，网络不可用时仍可离线查看，<strong>不会白屏</strong>。</p>
+  <p>本项目代码以 <strong>MIT 许可证</strong>开源，全部逻辑可在仓库中审查（仓库地址见项目 README 与站点公告）。</p>
+</section>
+
+<section id="privacy">
+  <h2>二、隐私说明</h2>
+  <p>本站<strong>不收集、不存储、不上传任何能够识别个人身份的信息</strong>。没有账号体系，没有登录，没有表单提交到服务器，没有第三方统计或广告 SDK。</p>
+  <ul>
+    <li><strong>拍照识别</strong>：OCR 在您的浏览器本地通过 Tesseract.js 完成，图片与识别文字<strong>不会上传服务器</strong>。</li>
+    <li><strong>中奖录入与提醒</strong>：您填写的内容仅保存在本机浏览器的 <code>localStorage</code> 中，清除浏览器数据即可删除。</li>
+    <li><strong>服务端数据</strong>：边缘 KV 中仅保存公开的历史开奖数据，不含任何用户数据。</li>
+    <li><strong>Cookie</strong>：不使用追踪 Cookie；仅使用浏览器本地存储保存界面偏好。</li>
+    <li><strong>访问日志</strong>：由托管平台按常规运行需要短暂处理，本站不读取、不留存、不关联个人身份。</li>
+  </ul>
+  <h3>第三方资源</h3>
+  <p>页面从 <code>cdn.jsdelivr.net</code> 加载 Chart.js（图表）与 Tesseract.js（本地 OCR）两个开源库，仅用于前端功能，不用于追踪。若不需要拍照识别功能，可完全离线使用（图表功能需该库）。</p>
+</section>
+
+<section id="disclaimer">
+  <h2>三、免责声明</h2>
+  <div class="warn">
+    <p><strong>彩票开奖为独立随机事件，不存在可预测规律。</strong>本站所有统计结果、模型输出与号码组合仅是对历史数据的描述，<strong>不能预测未来开奖结果，不构成投注建议，也不保证任何中奖结果</strong>。</p>
+  </div>
+  <ul>
+    <li>本站为个人非经营性学习项目，<strong>不销售彩票、不代购、不收费、不含广告</strong>，与任何彩票机构无关联。</li>
+    <li>数据仅供研究参考，不保证完整、及时或绝对准确；请以官方公布为准。</li>
+    <li>请理性购彩、量力而行；<strong>未满 18 周岁请勿购彩</strong>。如您或家人有赌博困扰，请寻求专业帮助。</li>
+    <li>开源代码按 MIT 许可证「按原样」提供，使用者应自行遵守所在地法律法规，作者不承担因使用本工具产生的任何直接或间接后果。</li>
+  </ul>
+</section>
+
+<section id="contact">
+  <h2>四、联系与误报申诉</h2>
+  <p>若您认为本站被安全软件或浏览器<strong>误判为风险网站</strong>，或发现页面内容、数据存在问题，欢迎通过开源仓库的 Issues 反馈（仓库地址见项目 README 与站点公告），我们会及时核实与整改。</p>
+  <p>本页即为站点合规说明，可直接作为申诉材料引用：<code>https://maicaipiao.top/about.html</code></p>
+</section>
+
+<footer>
+  本站为个人开源非商业项目 · 不销售彩票 · 不收集个人信息 · 不构成投注建议 · 请理性购彩
+</footer>
+
+</main>
+</body>
+</html>

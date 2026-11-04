@@ -1,0 +1,28 @@
+name = "maicaipiao"
+main = "worker.js"
+compatibility_date = "2025-10-01"
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+# 必须为 true：默认 false 时 Cloudflare 会直接返回静态资源、根本不执行 Worker，
+# worker.js 里给 HTML 加的缓存头 / HSTS / nosniff 等安全响应头就全部失效。
+# 设为 true 后所有请求先经过 Worker，再由 ASSETS 绑定回源静态文件。
+run_worker_first = true
+
+# 推送密钥不要写在这里。部署时执行：
+#   wrangler secret put EDGE_PUSH_TOKEN
+# 本机 server.js 用同一个值构造 PUSH_URL（参见 .env.example）。
+
+[[kv_namespaces]]
+binding = "LOTTERY_KV"
+id = "1a8906a52bd94cd8b48caf8bd046cc9c"
+
+# 域名走 Worker；数据由本机 server.js 推送（平时 60 分钟，开奖后自动密集抓取）
+[[routes]]
+pattern = "maicaipiao.top/*"
+zone_name = "maicaipiao.top"
+
+[[routes]]
+pattern = "www.maicaipiao.top/*"
+zone_name = "maicaipiao.top"
