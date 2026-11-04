@@ -129,6 +129,15 @@ cp .env.example .env
    cd cf-worker
    CLOUDFLARE_API_TOKEN=xxx wrangler deploy
    ```
+   Windows 上也可以直接双击根目录的 `deploy-worker.bat`：它会提示粘贴 Token
+   （输入不回显、不写入任何文件），然后自动执行 `whoami` → `secret list` → `deploy` → 响应头检查。
+   轮换 API Token 时按「先创建新 Token → 用新 Token 部署成功 → 再撤销旧 Token」的顺序操作。
+
+   > `wrangler.toml` 里的 `run_worker_first = true` 必须保留：默认 `false` 时 Cloudflare 会直接返回静态资源、
+   > 不执行 Worker，`worker.js` 中给 HTML 加的缓存头与 HSTS / nosniff 等安全响应头会全部失效。
+   > 部署后可用 `curl -I https://<你的域名>/` 检查是否出现 `Strict-Transport-Security`
+   > 和 `Cache-Control: public, max-age=600...`。
+
    部署前确保 `cf-worker/public/index.html` 与根目录 `lottery-analyzer.html` 一致：
    ```bash
    cp lottery-analyzer.html cf-worker/public/index.html
