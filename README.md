@@ -7,9 +7,11 @@
 [![Zero dependencies](https://img.shields.io/badge/dependencies-none-brightgreen.svg)](README.md)
 [![Single file](https://img.shields.io/badge/frontend-single%20html-orange.svg)](lottery-analyzer.html)
 
-> **开源仓库**：https://github.com/jingmei/lottery-analyzer
-> **Gitee 镜像**：https://gitee.com/respectfully-mei/lottery-analyzer （已同步，见 [GITEE_SETUP.md](docs/GITEE_SETUP.md)）
+> **开源代码（国内推荐，对外统一用这个）**：https://gitee.com/respectfully-mei/lottery-analyzer
+> 　└ 带 README 锚点的完整版（比赛投稿「开源代码」栏可填）：`https://gitee.com/respectfully-mei/lottery-analyzer#彩票历史数据统计分析工具`
+> **GitHub 主仓库**：https://github.com/jingmei/lottery-analyzer （本地推送源；国内访问经常不稳定）
 > **在线站点**：https://maicaipiao.top
+> Gitee 与 GitHub 内容保持同步，维护见 [GITEE_SETUP.md](docs/GITEE_SETUP.md)。选 Gitee 作对外主链接，是因为国内访问 GitHub 经常超时 / 连不上。
 > 代码以 MIT 许可证开源，欢迎审查与反馈；仓库 Issues 也可用于风险提示误报申诉。
 
 ---

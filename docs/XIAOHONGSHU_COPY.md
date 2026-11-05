@@ -28,7 +28,7 @@
 
 ✅ **成果**
 - 一个单文件工具：`lottery-analyzer.html`，双击即开
-- 已上线站点（Cloudflare 边缘，手机/网页通用），代码开源在 GitHub + Gitee 镜像
+- 已上线站点（Cloudflare 边缘，手机/网页通用），代码开源在 Gitee，国内直接打开不用梯子
 - 实测把数据接口从 284KB 裸传压到几十 KB，弱网下「连接中」不再长时间挂起
 
 💬 **使用感受**
@@ -48,6 +48,8 @@
 文案发布后，到活动页 https://www.workbuddy.link/p/tmLIChKEjyBNv8UQXxD29c?source=2 提交：
 - 你这篇小红书的**链接**
 - 必要信息（账号 mei jing / 小红书号 117834665、使用的模型：混元 Hy4）
+- **开源代码**：https://gitee.com/respectfully-mei/lottery-analyzer#彩票历史数据统计分析工具
+  （选 Gitee 不选 GitHub：国内评委 / 审核直接能打开，GitHub 经常连不上；仓库为公开、`main` 分支，已与 GitHub 同步）
 - 作品链接：你的站点地址（部署后填）
 
 > 注：活动页说明「投稿内容不会在活动页公开展示，截止后统一核验评选」，所以小红书正文里不必重复填链接，发布后去活动页单独提交即可。

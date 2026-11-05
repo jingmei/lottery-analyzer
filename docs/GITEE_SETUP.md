@@ -1,7 +1,7 @@
-# 发布到 Gitee（国内代码镜像）
+# 发布到 Gitee（国内对外主链接）
 
-> Gitee 在本项目里**只作为代码镜像仓库**使用：让国内访问者能更快看到源码、也多一个可被审核员查证的公开仓库。
-> **在线站点仍然是 https://maicaipiao.top**（Cloudflare Worker + KV），Gitee 不承载网页访问。
+> 2026-11-05 起，Gitee 是本项目**面向国内读者 / 比赛投稿 / 审核员的对外开源主链接**：GitHub 国内经常连不上，仅保留为本地推送源与海外渠道（Show HN / Product Hunt）备用。所有国内文案、站点页脚、比赛「开源代码」栏统一填 Gitee。
+> 两处仓库内容保持同步；Gitee 只承载源码，**在线站点仍然是 https://maicaipiao.top**（Cloudflare Worker + KV），Gitee Pages 已下线、不承载网页访问。
 
 ## 0. 已确认的信息（2026-11-05 实测）
 
@@ -10,9 +10,10 @@
 | Gitee 用户名 | **`respectfully-mei`** |
 | 昵称 | 敬美 |
 | 个人主页 | https://gitee.com/respectfully-mei （实链，已验证 200） |
-| 镜像仓库 | `https://gitee.com/respectfully-mei/lottery-analyzer` |
-| 当前状态 | **已创建并可访问**（2026-11-05 复测 API 返回 **200**）；GitHub 主仓库与 Gitee 镜像均已就绪 |
-| GitHub 主仓库 | https://github.com/jingmei/lottery-analyzer （`main` 分支） |
+| 对外主链接 | `https://gitee.com/respectfully-mei/lottery-analyzer` |
+| 比赛投稿可用（带 README 锚点） | `https://gitee.com/respectfully-mei/lottery-analyzer#彩票历史数据统计分析工具` |
+| 当前状态 | **公开仓库、已同步最新**（2026-11-05 17:09 复测：仓库页 200、默认分支 `main`、`pushed_at` 当日、README 与本地一致） |
+| GitHub 主仓库 | https://github.com/jingmei/lottery-analyzer （本地推送源 / 海外渠道备用，`main` 分支） |
 | 站点 | https://maicaipiao.top |
 
 > 账号已由 Gitee OpenAPI 核实：`login=respectfully-mei`、`name=敬美`。

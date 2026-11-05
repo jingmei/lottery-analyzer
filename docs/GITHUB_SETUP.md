@@ -143,11 +143,11 @@ git grep -nEi 'PUSH_TOKEN=[^$<]|api[_-]?token|password|cfut_|ghp_|[A-Fa-f0-9]{40
 
 双击 **`deploy-worker.bat`**（隐藏输入 Cloudflare API Token）→ 自动 `wrangler deploy`。
 
-部署后线上首页页脚与 `/about.html` 会显示 `github.com/jingmei/lottery-analyzer`，这也是华为 / 腾讯申诉时「代码可审查」的佐证。
+部署后线上首页页脚与 `/about.html` 会显示 **Gitee 仓库** `gitee.com/respectfully-mei/lottery-analyzer`（2026-11-05 起对外主链接改用 Gitee，因为国内访问 GitHub 经常连不上），`/about.html` 同时保留 GitHub 与 Issues 链接作为备用。这也是华为 / 腾讯申诉时「代码可审查」的佐证。
 
 ## 8. 国内镜像与免费推广
 
-- **Gitee 国内代码镜像**：见 [GITEE_SETUP.md](GITEE_SETUP.md)（Gitee 用户名 `respectfully-mei`；Gitee Pages 已下线，仅作代码镜像）。
+- **Gitee 对外主链接**：见 [GITEE_SETUP.md](GITEE_SETUP.md)（用户名 `respectfully-mei`；国内分享 / 比赛投稿统一用它；Gitee Pages 已下线，只承载源码、不承载网页）。
 - **免费推广渠道**：见 [PROMOTION.md](PROMOTION.md)。
 
 ## 9. 故障排查速查表

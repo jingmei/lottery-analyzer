@@ -16,7 +16,7 @@
 | Releases | 首个版本打 tag `v1.0.0`，写清功能与合规说明 |
 | Discussions / Issues | 开启，作为反馈与申诉联系入口 |
 | 提交到 Awesome 列表 | 搜索 `awesome-cn`、`HelloGitHub` 等收录开源项目的仓库，按格式提 PR |
-| Gitee 国内镜像 | https://gitee.com/respectfully-mei/lottery-analyzer （已就绪，维护见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
+| **Gitee（对外主链接）** | https://gitee.com/respectfully-mei/lottery-analyzer （已同步、公开仓库；国内分享 / 比赛投稿统一用这个，GitHub 国内经常连不上。维护见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
 
 ## 二、渠道清单（按优先级）
 
@@ -163,9 +163,9 @@
 「本机抓数 → 推边缘 KV → 手机读缓存」，边缘完全不抓官网。
 另外做了页面短缓存 + 请求超时重试 + 内嵌快照兜底，跨洋链路波动时也不会白屏。
 
-代码 MIT 开源，欢迎审查：
-GitHub: https://github.com/jingmei/lottery-analyzer
+代码 MIT 开源，欢迎审查（国内优先 Gitee）：
 Gitee : https://gitee.com/respectfully-mei/lottery-analyzer
+GitHub: https://github.com/jingmei/lottery-analyzer
 在线  : https://maicaipiao.top
 
 说明：只是历史数据的整理与可视化，彩票开奖是独立随机事件，不存在可预测规律；
@@ -176,7 +176,7 @@ Gitee : https://gitee.com/respectfully-mei/lottery-analyzer
 
 ```text
 项目：彩票历史数据统计分析工具
-链接：https://github.com/jingmei/lottery-analyzer
+链接：https://gitee.com/respectfully-mei/lottery-analyzer#彩票历史数据统计分析工具
 一句话：一个单文件、零依赖、可离线使用的彩票开奖数据可视化工具。
 推荐理由：把 300 期历史数据直接内嵌进 HTML，双击即用；拍照识别与图表都在浏览器
 本地完成，不上传任何数据。实现上还处理了「海外边缘节点抓国内官网被 WAF 拦截」
@@ -213,14 +213,15 @@ prediction claims, no betting features, no ads, no data collection.
 ### D. Product Hunt
 
 - Tagline：`A single HTML file for lottery draw data analysis — offline, zero dependencies`
-- First comment：讲动机、架构取舍、合规边界，附 GitHub 链接与免责声明；不要写任何暗示提升中奖概率的表述。
+- First comment：讲动机、架构取舍、合规边界，附仓库链接（海外渠道用 GitHub，国内渠道用 Gitee）与免责声明；不要写任何暗示提升中奖概率的表述。
 
 ---
 
 ## 九、现阶段节奏（2026-11-05）
 
-- **全部链接已是实链**：GitHub、Gitee 镜像、`https://maicaipiao.top` 均返回 200，可放心写进文案。
-- **申诉期间的主链接策略**：华为手机自带浏览器的风险提示仍在复审（预计 2~3 工作日）。这段时间推广**主推 GitHub / Gitee 仓库地址**，把站点放在「在线 Demo」次要位置 —— 否则部分华为用户点进去会看到拦截页，转化白白打折。申诉通过后再把站点提到主位，并补小红书 / B站 / 公众号等面向普通用户的内容。
+- **全部链接已是实链**：Gitee 仓库、GitHub 主仓库、`https://maicaipiao.top` 均返回 200，可放心写进文案。2026-11-05 复核：Gitee 为公开仓库、`main` 分支，README 内容与本地一致（已同步）。
+- **开源代码链接一律用 Gitee**：GitHub 国内经常连不上，所有面向国内读者的渠道（比赛投稿、小红书、V2EX、掘金、阮一峰周刊、站点页脚）统一填 `https://gitee.com/respectfully-mei/lottery-analyzer`（比赛「开源代码」栏可用带锚点版 `…#彩票历史数据统计分析工具`）。只有 Show HN / Product Hunt 这类海外渠道保留 GitHub 链接。
+- **申诉期间的主链接策略**：华为手机自带浏览器的风险提示仍在复审（预计 2~3 工作日）。这段时间推广**主推 Gitee 仓库地址**，把站点放在「在线 Demo」次要位置 —— 否则部分华为用户点进去会看到拦截页，转化白白打折。申诉通过后再把站点提到主位，并补小红书 / B站 / 公众号等面向普通用户的内容。
 - **本周建议只做三件**：① 阮一峰周刊投稿 ② V2EX「分享创造」 ③ 掘金发一篇技术拆解（三选二也行）。先拿到第一批真实反馈，再决定是否铺量。
 - **不要碰**：彩票 / 博彩论坛与导航站、买量、用「预测」「荐号」「提高中奖率」做 SEO 关键词、短时间密集重复发帖。这类操作对类目敏感项目不仅无效，还可能反过来加重平台的风险标记。
 - 每篇文末固定附免责声明，口径与 [COMPLIANCE.md](COMPLIANCE.md)、`cf-worker/public/about.html` 保持一致。
