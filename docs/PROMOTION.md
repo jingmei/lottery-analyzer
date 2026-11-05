@@ -17,7 +17,6 @@
 | Discussions / Issues | 开启，作为反馈与申诉联系入口 |
 | 提交到 Awesome 列表 | 搜索 `awesome-cn`、`HelloGitHub` 等收录开源项目的仓库，按格式提 PR |
 | Gitee 国内镜像 | https://gitee.com/respectfully-mei/lottery-analyzer （已就绪，维护见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
-| English README | `README.en.md` + https://maicaipiao.top/en ，供海外访客 / Show HN / Product Hunt 使用 |
 
 ## 二、渠道清单（按优先级）
 
@@ -129,11 +128,7 @@
 
 在知乎 / SegmentFault 搜索「开奖数据 统计」「数据可视化 单文件」等已有问题，写正经技术回答再带链接；CSDN / 博客园发带完整思路的文章，不要只贴裸链接。这类内容半年后还在带来访问。
 
-### 5. 英文社区补充（初版只列了 HN / Reddit / PH）
-
-`dev.to`、`Hashnode`、`Lobste.rs` 对「单文件 / 离线优先 / 零依赖」这类工程话题友好；目录站 `AlternativeTo`、`SaaSHub` 提交时务必归类为**数据分析工具**，不要被归进博彩导航。
-
-### 6. GitHub 自身再挖一层
+### 5. GitHub 自身再挖一层
 
 - 打 `v1.0.0` Release，写清功能与合规说明；
 - Discussions 开「Show and tell」，沉淀用户反馈；
@@ -145,9 +140,6 @@
 ## 八、可直接复制的文案
 
 以下均为技术向口径、自带免责声明，可直接用或微调。**不要加入预测、荐号、提高中奖率类表述。**
-
-> 英文资源已就绪：`README.en.md`（仓库内）与 https://maicaipiao.top/en （站点英文说明页，自带完整英文免责）。
-> 上面 C / D 两份英文文案可直接在 first comment 或正文中补上这两个链接，海外审核与访客都能查证。
 
 ### A. V2EX「分享创造」
 
