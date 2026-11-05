@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lottery History Data Analyzer - About & Disclaimer</title>
+<meta name="description" content="A personal, open-source, non-commercial tool for analyzing publicly published lottery draw history. No prediction claims, no betting features, no ads, no data collection.">
+<link rel="alternate" hreflang="zh-CN" href="https://maicaipiao.top/">
+<link rel="alternate" hreflang="en" href="https://maicaipiao.top/en">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px;
+    background: #f5f7fa; color: #24303f;
+    font: 16px/1.85 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #2c3e6b, #43558f);
+    color: #fff; border-radius: 14px; padding: 28px 26px; margin-bottom: 22px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.5em; }
+  header p { margin: 0; opacity: .88; font-size: .92em; }
+  nav a {
+    display: inline-block; margin: 14px 10px 0 0; padding: 5px 14px;
+    background: rgba(255,255,255,.16); color: #fff; border-radius: 20px;
+    text-decoration: none; font-size: .88em;
+  }
+  nav a:hover { background: rgba(255,255,255,.3); }
+  section {
+    background: #fff; border: 1px solid #e3e8ef; border-radius: 12px;
+    padding: 22px 26px; margin-bottom: 18px;
+  }
+  h2 { margin: 0 0 14px; font-size: 1.15em; color: #2c3e6b; border-left: 4px solid #43558f; padding-left: 10px; }
+  h3 { margin: 18px 0 6px; font-size: 1em; color: #34495e; }
+  p, li { margin: 6px 0; }
+  ul { padding-left: 22px; }
+  strong { color: #1d2b45; }
+  .tag { display: inline-block; background: #eef2fb; color: #34495e; border-radius: 6px; padding: 2px 9px; margin: 3px 5px 3px 0; font-size: .88em; }
+  .warn { background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 10px; padding: 14px 18px; color: #6b5218; }
+  a { color: #2f5bb7; }
+  footer { text-align: center; color: #7a8698; font-size: .86em; margin-top: 26px; }
+  code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>Lottery History Data Analyzer</h1>
+  <p>A personal, open-source, non-commercial tool for organizing and visualizing publicly published lottery draw results.</p>
+  <nav>
+    <a href="#about">About</a>
+    <a href="#features">Features</a>
+    <a href="#privacy">Privacy</a>
+    <a href="#disclaimer">Disclaimer</a>
+    <a href="/">Chinese version</a>
+  </nav>
+</header>
+
+<section id="about">
+  <h2>1. What this site is</h2>
+  <p>This is a <strong>personal, open-source, non-commercial data analysis tool</strong>. It takes draw results that have already been published by official lottery organizations and turns them into frequency statistics, trend charts, historical comparisons and local OCR-based number entry, for data research purposes. All code is open source and can be reviewed.</p>
+
+  <h3>Data sources</h3>
+  <p>Results are compiled from the <strong>publicly published draw history</strong> of China Welfare Lottery and China Sports Lottery, and are used only for data reference and statistical analysis. This site <strong>is not affiliated with, endorsed by, or operated by any lottery issuer, seller or regulator, and is not an official website</strong>. If the data differs from an official announcement, the official announcement governs.</p>
+
+  <h3>What this site does NOT provide</h3>
+  <p>
+    <span class="tag">Ticket sales</span><span class="tag">Purchasing on behalf</span><span class="tag">Top-ups / redemptions</span>
+    <span class="tag">Paid features</span><span class="tag">Accounts / registration</span><span class="tag">Advertising</span>
+    <span class="tag">Betting guidance</span><span class="tag">Winning promises</span>
+  </p>
+  <p>Any number sets shown are <strong>descriptive outputs derived from historical frequencies</strong>, provided for research comparison only. They <strong>do not constitute betting advice</strong>, make no prediction claims, and imply no higher chance of winning. There are no purchase links, no commercial promotions and no content encouraging the purchase of tickets.</p>
+
+  <h3>Technology and deployment</h3>
+  <p>The front end is a single static HTML file with zero back-end dependencies. Static assets are served from Cloudflare Workers edge nodes. Draw data is fetched from official public endpoints by a machine located in mainland China and then pushed to an edge KV cache; edge nodes never fetch those sources themselves (overseas IPs are blocked by their WAF). A 300-draw snapshot is embedded in the page so it still renders offline, <strong>without a blank screen</strong>.</p>
+  <p>The project is released under the <strong>MIT License</strong> and can be reviewed at
+    <a href="https://github.com/jingmei/lottery-analyzer" target="_blank" rel="noopener noreferrer">github.com/jingmei/lottery-analyzer</a>;
+    a domestic mirror is available at
+    <a href="https://gitee.com/respectfully-mei/lottery-analyzer" target="_blank" rel="noopener noreferrer">gitee.com/respectfully-mei/lottery-analyzer</a>.
+    <a href="https://github.com/jingmei/lottery-analyzer/issues" target="_blank" rel="noopener noreferrer">Issues</a> are open for feedback and false-positive appeals.</p>
+  <p>The live demo is at <a href="https://maicaipiao.top/">https://maicaipiao.top/</a> (Chinese interface).</p>
+</section>
+
+<section id="features">
+  <h2>2. Features</h2>
+  <ul>
+    <li><strong>Six lottery games</strong>: Shuangseqiu, Daletou, Kuaile 8, Fucai 3D, Qilecai and Pailie 3.</li>
+    <li><strong>Statistics</strong>: frequency over 30 / 50 / 100 draws, omission, trends, odd/even, sum and span, plus charts.</li>
+    <li><strong>Local OCR entry</strong>: Tesseract.js runs entirely in the browser; images and recognized text are never uploaded.</li>
+    <li><strong>Local result entry and reminders</strong>: saved only in the browser's <code>localStorage</code>.</li>
+    <li><strong>Offline use</strong>: a 300-draw snapshot is embedded in the single HTML file.</li>
+    <li><strong>Smart refresh</strong>: every 60 minutes normally; after each draw, retries every 10 minutes from +20 minutes until the new period arrives.</li>
+  </ul>
+  <p>Chart and OCR libraries (Chart.js, Tesseract.js) are loaded from <code>cdn.jsdelivr.net</code> for front-end functionality only; they are not used for tracking. Without them the analysis features still work offline.</p>
+</section>
+
+<section id="privacy">
+  <h2>3. Privacy</h2>
+  <p>This site <strong>does not collect, store or upload any personally identifiable information</strong>. There is no account system, no login, no server-side form submission, and no third-party analytics or advertising SDK.</p>
+  <ul>
+    <li><strong>OCR</strong> runs locally in your browser; images and recognized text never leave the device.</li>
+    <li><strong>Result entry and reminders</strong> are stored only in your browser's <code>localStorage</code> and can be removed by clearing browser data.</li>
+    <li><strong>Server-side data</strong>: the edge KV holds only public historical draw results, never user data.</li>
+    <li><strong>Cookies</strong>: no tracking cookies; only local browser storage for interface preferences.</li>
+    <li><strong>Access logs</strong>: handled briefly by the hosting platform for normal operation; this site does not read, retain or correlate them with individuals.</li>
+  </ul>
+</section>
+
+<section id="disclaimer">
+  <h2>4. Disclaimer</h2>
+  <div class="warn">
+    <p><strong>Lottery draws are independent random events; there is no predictable pattern.</strong> All statistics, model output and number sets on this site merely describe historical data. They <strong>cannot predict future results, constitute no betting advice, and guarantee no outcome</strong>.</p>
+  </div>
+  <ul>
+    <li>This is a personal, non-commercial study project: <strong>no ticket sales, no purchasing on behalf, no fees, no advertising</strong>, and no affiliation with any lottery organization.</li>
+    <li>Data is for research reference only and is not guaranteed to be complete, timely or perfectly accurate; always refer to official announcements.</li>
+    <li>Please play responsibly and within your means. <strong>Do not purchase lottery tickets if you are under 18.</strong> If you or someone you know has a gambling problem, please seek professional help.</li>
+    <li>The open-source code is provided "as is" under the MIT License. Users are responsible for complying with the laws of their own jurisdiction; the author assumes no liability for any consequences of using this tool.</li>
+  </ul>
+</section>
+
+<section id="contact">
+  <h2>5. Contact and false-positive appeals</h2>
+  <p>If you believe this site has been <strong>incorrectly flagged as a risk website</strong> by a browser or security vendor, or if you find a problem with the content or data, please open an issue at
+    <a href="https://github.com/jingmei/lottery-analyzer/issues" target="_blank" rel="noopener noreferrer">GitHub Issues</a>. Reports are reviewed and corrected promptly.</p>
+  <p>Compliance references that can be cited in an appeal:</p>
+  <ul>
+    <li>Chinese site notice, privacy and disclaimer: <code>https://maicaipiao.top/about.html</code></li>
+    <li>This English notice: <code>https://maicaipiao.top/en</code></li>
+    <li>Security contact file: <code>https://maicaipiao.top/.well-known/security.txt</code></li>
+    <li>Open-source repository (MIT): <code>https://github.com/jingmei/lottery-analyzer</code></li>
+  </ul>
+  <p>Regarding filing: this site is served by Cloudflare Workers / KV from edge locations <strong>outside mainland China</strong> and is not hosted on a server inside mainland China, so ICP filing does not apply to this deployment. <strong>No filing number is claimed or fabricated.</strong> It is a personal, open-source, non-commercial project with no transaction, account, advertising or data-collection functions.</p>
+</section>
+
+<footer>
+  Personal open-source, non-commercial project · No ticket sales · No personal data collection · No betting advice · Play responsibly
+  &nbsp;·&nbsp; <a href="/">中文版</a>
+</footer>
+
+</main>
+</body>
+</html>

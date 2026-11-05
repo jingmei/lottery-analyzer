@@ -17,6 +17,7 @@
 | Discussions / Issues | 开启，作为反馈与申诉联系入口 |
 | 提交到 Awesome 列表 | 搜索 `awesome-cn`、`HelloGitHub` 等收录开源项目的仓库，按格式提 PR |
 | Gitee 国内镜像 | https://gitee.com/respectfully-mei/lottery-analyzer （已就绪，维护见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
+| English README | `README.en.md` + https://maicaipiao.top/en ，供海外访客 / Show HN / Product Hunt 使用 |
 
 ## 二、渠道清单（按优先级）
 
@@ -144,6 +145,9 @@
 ## 八、可直接复制的文案
 
 以下均为技术向口径、自带免责声明，可直接用或微调。**不要加入预测、荐号、提高中奖率类表述。**
+
+> 英文资源已就绪：`README.en.md`（仓库内）与 https://maicaipiao.top/en （站点英文说明页，自带完整英文免责）。
+> 上面 C / D 两份英文文案可直接在 first comment 或正文中补上这两个链接，海外审核与访客都能查证。
 
 ### A. V2EX「分享创造」
 

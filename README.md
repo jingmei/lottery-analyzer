@@ -10,6 +10,7 @@
 > **开源仓库**：https://github.com/jingmei/lottery-analyzer
 > **Gitee 镜像**：https://gitee.com/respectfully-mei/lottery-analyzer （已同步，见 [GITEE_SETUP.md](docs/GITEE_SETUP.md)）
 > **在线站点**：https://maicaipiao.top
+> **English**: [README.en.md](README.en.md) 　·　 [English site notice](https://maicaipiao.top/en)
 > 代码以 MIT 许可证开源，欢迎审查与反馈；仓库 Issues 也可用于风险提示误报申诉。
 
 ---
@@ -168,6 +169,7 @@ cp .env.example .env
 ├── .env.example                   # 本地配置模板（.env 不入库）
 ├── .gitignore
 ├── LICENSE                        # MIT
+├── README.en.md                   # English README（海外访客 / Show HN）
 ├── scripts/
 │   └── compliance-check.cjs       # 敏感词 / 合规检查，可复跑（--fix 自动整改）
 ├── docs/
@@ -180,8 +182,9 @@ cp .env.example .env
     ├── worker.js                  # Cloudflare Worker（静态 + KV + /api/push）
     ├── wrangler.toml              # 部署配置
     └── public/
-        ├── index.html             # 部署副本
-        ├── about.html             # 站点说明 / 隐私 / 免责 / 申诉入口
+        ├── index.html             # 部署副本（与根目录主页面一致）
+        ├── about.html             # 中文站点说明 / 隐私 / 免责 / 申诉入口
+        ├── en.html                # 英文落地页 + 英文合规说明（/en）
         └── .well-known/security.txt
 ```
 
