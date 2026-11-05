@@ -204,16 +204,41 @@ async function build(prev) {
   };
 }
 
-function json(obj, extraHeaders, status) {
-  return new Response(typeof obj === 'string' ? obj : JSON.stringify(obj), {
-    status: status || 200,
-    headers: Object.assign({
-      'Content-Type': 'application/json; charset=utf-8',
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Headers': '*',
-      'Cache-Control': 'no-store'
-    }, extraHeaders || {})
-  });
+// Cloudflare 不会自动压缩「Worker 运行时生成的响应体」（只对 Static Assets / 回源做压缩），
+// 所以 /api/data 这类 JSON 必须自行压缩，否则 284KB 裸传会在弱网/跨洋链路下长时间挂起。
+// 注意：Web 标准 CompressionStream 只支持 gzip / deflate / deflate-raw，不支持 br；
+// 浏览器虽在 Accept-Encoding 带 br，但只能由我们出 gzip（实测 282KB JSON → 37KB，约 13%）。
+// 协商策略：客户端接受 gzip 则用 gzip，否则接受 deflate 用 deflate，都不支持就原样返回。
+async function compressText(text, request) {
+  const ae = ((request && request.headers && request.headers.get('Accept-Encoding')) || '').toLowerCase();
+  let enc = null;
+  if (ae.indexOf('gzip') >= 0) enc = 'gzip';
+  else if (ae.indexOf('deflate') >= 0) enc = 'deflate';
+  if (!enc) return { body: text, encoding: null };
+  try {
+    const cs = new CompressionStream(enc);
+    const writer = cs.writable.getWriter();
+    writer.write(new TextEncoder().encode(text));
+    writer.close();
+    const buf = await new Response(cs.readable).arrayBuffer();
+    return { body: buf, encoding: enc };
+  } catch (e) {
+    return { body: text, encoding: null };
+  }
+}
+
+async function json(obj, request, extraHeaders, status) {
+  const text = typeof obj === 'string' ? obj : JSON.stringify(obj);
+  const { body, encoding } = await compressText(text, request);
+  const headers = Object.assign({
+    'Content-Type': 'application/json; charset=utf-8',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
+    'Cache-Control': 'no-store',
+    'Vary': 'Accept-Encoding'
+  }, extraHeaders || {});
+  if (encoding) headers['Content-Encoding'] = encoding;
+  return new Response(body, { status: status || 200, headers });
 }
 
 // 统一清洗对外 payload：
@@ -296,14 +321,14 @@ export default {
       });
     }
 
-    if (p === '/api/probe') return json(await probe());
+    if (p === '/api/probe') return json(await probe(), request);
 
-    if (p === '/api/ping') return json({ ok: true, ts: Date.now(), kv: !!env.LOTTERY_KV });
+    if (p === '/api/ping') return json({ ok: true, ts: Date.now(), kv: !!env.LOTTERY_KV }, request);
 
     if (p === '/api/data' || p === '/live-data.json') {
       if (env.LOTTERY_KV) {
         const s = await env.LOTTERY_KV.get('data');
-        if (s) return json(sanitize(JSON.parse(s)), { 'Cache-Control': 'public, max-age=30' });
+        if (s) return json(sanitize(JSON.parse(s)), request, { 'Cache-Control': 'public, max-age=30' });
       }
       // KV 尚无数据：绝不在边缘现场抓（海外 IP 抓 cwl.gov.cn 必被网宿 403），
       // 返回空 data 让页面使用内嵌快照，并给出人话提示
@@ -311,13 +336,13 @@ export default {
         ok: true, data: {}, updatedAt: null, updatedAtText: null, errors: [],
         nextAt: null, intervalMs: 3600000, intervalMin: 60, refreshing: false, rounds: 0, types: snapshot({}),
         notice: '数据尚未同步，页面先展示内嵌快照；本机上线后会在每次开奖后自动更新。'
-      }));
+      }), request);
     }
 
     if (p === '/api/status') {
       const meta = await getMeta(env);
-      if (meta) return json(Object.assign({ ok: true, serverTime: Date.now(), intervalMs: 3600000, intervalMin: 60, refreshing: false, rounds: 0 }, sanitize(meta)));
-      return json({ ok: true, serverTime: Date.now(), updatedAt: null, errors: [], types: snapshot({}), notice: '等待本机同步数据' });
+      if (meta) return json(Object.assign({ ok: true, serverTime: Date.now(), intervalMs: 3600000, intervalMin: 60, refreshing: false, rounds: 0 }, sanitize(meta)), request);
+      return json({ ok: true, serverTime: Date.now(), updatedAt: null, errors: [], types: snapshot({}), notice: '等待本机同步数据' }, request);
     }
 
     // 边缘节点不直接抓官方源（必被 403），「立即刷新」只回报状态，不覆盖 KV
@@ -326,7 +351,7 @@ export default {
       return json({
         ok: true, skipped: true, updatedAt: meta ? meta.updatedAt : null,
         notice: '官方数据由本机在每次开奖后自动抓取并同步到边缘；边缘节点不直接抓取（海外 IP 会被官网拦截）。'
-      });
+      }, request);
     }
 
     // 本机 server.js 推送：POST /api/push?token=xxx
@@ -335,9 +360,9 @@ export default {
       // 未配置密钥时一律拒绝，避免「空 token === 空配置」被绕过
       const configured = env.EDGE_PUSH_TOKEN || '';
       const provided = u.searchParams.get('token') || '';
-      if (!configured || provided !== configured) return json({ ok: false, error: 'bad token' }, null, 403);
+      if (!configured || provided !== configured) return json({ ok: false, error: 'bad token' }, request, null, 403);
       const body = await request.json();
-      if (!body || !body.data) return json({ ok: false, error: 'bad body' }, null, 400);
+      if (!body || !body.data) return json({ ok: false, error: 'bad body' }, request, null, 400);
       const clean = sanitize(body);
       const meta = {
         updatedAt: clean.updatedAt || Date.now(),
@@ -346,10 +371,10 @@ export default {
         notice: clean.notice || null
       };
       await saveKV(env, clean, meta);
-      return json({ ok: true, saved: true });
+      return json({ ok: true, saved: true }, request);
     }
 
-    if (p === '/api/health') return json({ ok: true, ts: Date.now() });
+    if (p === '/api/health') return json({ ok: true, ts: Date.now() }, request);
 
     // 其余交给静态资源（含 /、about.html 和微信验证 txt）
     const assetRes = await env.ASSETS.fetch(request);

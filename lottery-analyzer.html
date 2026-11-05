@@ -1292,7 +1292,7 @@
             <p>2026年最新真实数据 · 概率分析 · 理性选号</p>
             <div id="live-status" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;font-size:0.82em;">
                 <span id="live-badge" style="padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.18);color:#fff;font-weight:600;">
-                    ⏳ 正在连接数据服务…
+                    📡 等待首次同步
                 </span>
                 <span id="live-time" style="opacity:0.85;"></span>
                 <span id="live-countdown" style="opacity:0.85;"></span>
@@ -9630,7 +9630,7 @@
             nextAt: null,        // 下次刷新时间戳
             intervalMs: 300000,
             errors: [],
-            notice: null,        // 服务端下发的人话提示（数据源限流/等待同步等）
+            notice: null,        // 服务端下发的人话提示（现已停用告警式文案，仅首同步时提示）
             timer: null,
             pollTimer: null,
             retryTimer: null     // 断线后的自动重连
@@ -9665,16 +9665,29 @@
         function renderLiveMeta() {
             const t = document.getElementById('live-time');
             const btn = document.getElementById('live-refresh');
-            if (btn) btn.style.display = LIVE.connected ? 'inline-block' : 'none';
+            // 刷新按钮始终可点：即使暂未连上实时同步，也可手动重试（页面始终有可用数据）
+            if (btn) btn.style.display = 'inline-block';
             if (!t) return;
             if (LIVE.connected) {
                 const age = LIVE.updatedAt ? `数据更新于 ${new Date(LIVE.updatedAt).toLocaleString('zh-CN')}` : '等待首次同步';
-                // 数据源限流/被拒时给友好说明，不再显示「N 项抓取失败」
+                // 提示只展示最新一次成功更新的时间（updatedAt），不显示「未取到/限流」
                 t.textContent = LIVE.notice
                     ? `📡 ${age}　·　ℹ️ ${LIVE.notice}`
                     : `📡 ${age}`;
             } else {
-                t.textContent = '📴 离线快照模式（内嵌数据）';
+                // 异常时只说明「官方数据源暂未同步」，不暗示站点/服务中断，避免用户误以为断网
+                t.textContent = '📡 当前展示最近可用的开奖数据（官方数据源暂未同步）';
+            }
+        }
+
+        // 连接 / 刷新进行中：只展示「最近一次数据更新时间」，不显示「正在连接 / 重试」类
+        // 会因弱网或大数据响应而长时间挂起的文案（用户明确要求）。
+        function showDataTimeBadge() {
+            if (LIVE.updatedAt) {
+                setBadge('📡 数据更新于 ' + new Date(LIVE.updatedAt).toLocaleString('zh-CN'),
+                    'rgba(255,255,255,0.95)', '#1a7f37');
+            } else {
+                setBadge('📡 等待首次同步', 'rgba(255,255,255,0.9)', '#8a6d00');
             }
         }
 
@@ -9713,7 +9726,7 @@
                 return true;
             } catch (e) {
                 if (attempt < 2) {
-                    setBadge('🔄 数据同步较慢，正在重试…', 'rgba(255,255,255,0.9)', '#8a6d00');
+                    showDataTimeBadge();   // 进行中只展示数据更新时间，不显示「正在重试」挂起文案
                     await new Promise(r => setTimeout(r, 1500 * (attempt + 1)));
                     return pullLiveData(attempt + 1);
                 }
@@ -9742,18 +9755,36 @@
         async function manualRefresh() {
             const btn = document.getElementById('live-refresh');
             if (btn) { btn.disabled = true; btn.textContent = '检查中…'; }
-            setBadge('🔄 正在检查最新数据…', 'rgba(255,255,255,0.9)', '#333');
+            showDataTimeBadge();   // 刷新进行中只展示数据更新时间，不显示「正在连接」挂起文案
             try {
                 await pullLiveData();
-                setBadge(LIVE.notice ? '🟢 已同步（数据源限流，展示上次数据）' : '🟢 已是最新数据',
+                setBadge(LIVE.updatedAt
+                    ? '🟢 已同步 · 数据更新于 ' + new Date(LIVE.updatedAt).toLocaleString('zh-CN')
+                    : '🟢 已同步（首次数据同步中）',
                     'rgba(255,255,255,0.95)', '#1a7f37');
             } catch (e) {
                 LIVE.connected = false;
-                setBadge('⚠️ 暂时连不上数据服务，已使用内嵌快照', 'rgba(255,255,255,0.9)', '#b26a00');
+                // 异常时归因于「官方数据源未同步」，不提示服务中断类文案
+                setBadge('🟡 官方数据源暂未同步，显示最近可用数据', 'rgba(255,255,255,0.9)', '#b26a00');
                 renderLiveMeta();
+                startReconnect();
             } finally {
                 if (btn) { btn.disabled = false; btn.textContent = '检查更新'; }
             }
+        }
+
+        // 断线后每 30 秒自动重连；恢复后启动轮询与倒计时。不弹「服务中断」类告警。
+        function startReconnect() {
+            if (LIVE.retryTimer) return;
+            LIVE.retryTimer = setInterval(async () => {
+                try {
+                    await pullLiveData();
+                    clearInterval(LIVE.retryTimer); LIVE.retryTimer = null;
+                    if (!LIVE.pollTimer) LIVE.pollTimer = setInterval(pollStatus, 15000);
+                    if (!LIVE.timer) LIVE.timer = setInterval(tickCountdown, 1000);
+                    tickCountdown();
+                } catch (err) { /* 继续等待，页面保持可用的开奖数据 */ }
+            }, 30000);
         }
 
         // ==================== 初始化 ====================
@@ -9775,20 +9806,10 @@
                 await pullLiveData();
             } catch (e) {
                 LIVE.connected = false;
-                setBadge('📴 离线快照（内嵌数据）', 'rgba(255,255,255,0.85)', '#555');
+                // 异常时归因于「官方数据源未同步 / 联网恢复后自动更新」，不提示服务中断类文案
+                setBadge('🟡 展示最近可用的开奖数据（联网恢复后自动更新）', 'rgba(255,255,255,0.9)', '#b26a00');
                 renderLiveMeta();
-                // 不直接放弃：网络恢复后每 30 秒自动重连
-                if (!LIVE.retryTimer) {
-                    LIVE.retryTimer = setInterval(async () => {
-                        try {
-                            await pullLiveData();
-                            clearInterval(LIVE.retryTimer); LIVE.retryTimer = null;
-                            if (!LIVE.pollTimer) LIVE.pollTimer = setInterval(pollStatus, 15000);
-                            if (!LIVE.timer) LIVE.timer = setInterval(tickCountdown, 1000);
-                            tickCountdown();
-                        } catch (err) { /* 继续等待，页面保持可用的内嵌快照 */ }
-                    }, 30000);
-                }
+                startReconnect();
                 return;
             }
 

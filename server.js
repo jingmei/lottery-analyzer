@@ -15,6 +15,7 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const zlib = require('zlib');
 
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 const REFRESH_MS = Number(process.env.REFRESH_MIN || 60) * 60 * 1000;
@@ -199,29 +200,36 @@ const drawDone = {};      // type:日期 -> 本期新数据已抓到
 let lastFetchAt = 0;
 let failStreak = 0;
 
-function pendingDraw() {
+function pendingDrawTypes() {
   const now = beijingNow();
   const hm = now.getHours() * 60 + now.getMinutes();
   const wd = now.getDay();
   const dk = localDateKey(now);
+  const list = [];
+  // 只收集「当天确实开奖 + 处于开奖后窗口 + 本期新数据尚未抓到」的彩种，
+  // 避免把 6 个数据源在窗口内一起刷，触发中彩网/体彩的 WAF 限流。
   for (const [type, s] of Object.entries(DRAW_SCHEDULE)) {
     if (s.weekdays && s.weekdays.indexOf(wd) < 0) continue;
     const elapsed = hm - minutesOf(s.time);
-    if (elapsed >= DRAW_OFFSET_MIN && elapsed <= DRAW_MAX_MIN && !drawDone[type + ':' + dk]) return s.label;
+    if (elapsed >= DRAW_OFFSET_MIN && elapsed <= DRAW_MAX_MIN && !drawDone[type + ':' + dk]) list.push(type);
   }
-  return null;
+  return list;
 }
 
 function smartTick() {
   if (STATE.refreshing) return;
-  const pending = pendingDraw();
+  const pending = pendingDrawTypes();
   const duePeriodic = Date.now() - lastFetchAt >= REFRESH_MS;
-  if (!pending && !duePeriodic) return;
-  // 开奖窗口每 10 分钟一次；连续被拒则退避到 20 分钟，避免加重限流
-  const cooldown = pending ? (failStreak >= 2 ? 20 : DRAW_STEP_MIN) * 60000 : 0;
+  if (!pending.length && !duePeriodic) return;
+  // 开奖窗口内只刷「当天确实开奖」的彩种（如双色球当晚只刷双色球），
+  // 降低对官网的请求量；连续被拒则退避到 20 分钟，避免加重限流。
+  const cooldown = pending.length
+    ? (failStreak >= 2 ? 20 : DRAW_STEP_MIN) * 60000
+    : 0;
   if (Date.now() - lastFetchAt < cooldown) return;
   lastFetchAt = Date.now();
-  refreshAll(pending ? '开奖后抓取·' + pending : '定时刷新');
+  refreshAll(pending.length ? '开奖后抓取·' + pending.map(t => NAMES[t]).join('/') : '定时刷新',
+             pending.length ? pending : null);
 }
 
 function scheduleSmartRefresh() {
@@ -325,14 +333,16 @@ function snapshot() {
   });
 }
 
-async function refreshAll(reason) {
+async function refreshAll(reason, onlyTypes) {
   if (STATE.refreshing) return { skipped: true };
   STATE.refreshing = true;
   const t0 = Date.now();
   const errors = [];
   const next = {};
+  // 开奖窗口内只刷新「当天确实开奖」的彩种；平时/手动则为全量
+  const jobs = (onlyTypes && onlyTypes.length) ? JOBS.filter(([t]) => onlyTypes.indexOf(t) >= 0) : JOBS;
 
-  for (const [type, fn] of JOBS) {
+  for (const [type, fn] of jobs) {
     try {
       const arr = await fn();
       if (arr && arr.length) {
@@ -348,7 +358,7 @@ async function refreshAll(reason) {
   }
 
   if (Object.keys(next).length) {
-    STATE.data = next;
+    STATE.data = Object.assign({}, STATE.data, next);   // 合并：只刷部分彩种时不丢失其余
     STATE.updatedAt = Date.now();
     STATE.rounds++;
     // 开奖后判定：只有「当天确实开奖 + 处在开奖后窗口内 + 抓到新期号」才标记本期完成。
@@ -374,9 +384,9 @@ async function refreshAll(reason) {
   STATE.errors = errors;
   STATE.lastError = errors.length ? errors.join(' | ') : null;
   STATE.blockedCount = errors.length;
-  STATE.notice = errors.length
-    ? `官方数据源暂时限流或拒绝访问（${errors.length} 项未取到），已保留上次成功抓取的数据；系统会在每次开奖后自动重试，无需手动操作。`
-    : null;
+  // 提示只展示「最新一次成功更新的时间」；被拒/限流时不写「未取到」，
+  // 数据已沿用上次成功抓取结果，用户无需看到告警式文案。
+  STATE.notice = STATE.updatedAt ? null : '正在抓取官方历史数据，首次同步中…';
   failStreak = errors.length ? failStreak + 1 : 0;
   STATE.refreshing = false;
   STATE.nextAt = Date.now() + REFRESH_MS;
@@ -391,25 +401,41 @@ async function refreshAll(reason) {
 // ==================== HTTP 服务 ====================
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.ico': 'image/x-icon' };
 
-function sendJSON(res, obj, code = 200) {
-  const body = JSON.stringify(obj);
-  res.writeHead(code, {
+// 客户端支持 gzip 时压缩响应体：本地 server.js 与线上 Worker 行为对齐，
+// 避免 /api/data 这类大 JSON 裸传导致弱网下长时间「连接中」。
+function gzipIfAccepted(req, buf) {
+  const ae = ((req && req.headers && (req.headers['accept-encoding'] || '')) + '').toLowerCase();
+  if (ae.indexOf('gzip') >= 0) return { body: zlib.gzipSync(buf), encoding: 'gzip' };
+  return { body: buf, encoding: null };
+}
+
+function sendJSON(req, res, obj, code = 200) {
+  const { body, encoding } = gzipIfAccepted(req, Buffer.from(JSON.stringify(obj), 'utf8'));
+  const headers = {
     'Content-Type': 'application/json; charset=utf-8',
     'Access-Control-Allow-Origin': '*',
     'Cache-Control': 'no-store',
-    'Content-Length': Buffer.byteLength(body)
-  });
+    'Vary': 'Accept-Encoding',
+    'Content-Length': body.length
+  };
+  if (encoding) headers['Content-Encoding'] = encoding;
+  res.writeHead(code, headers);
   res.end(body);
 }
 
-function serveFile(res, file) {
+function serveFile(req, res, file) {
   fs.readFile(file, (err, buf) => {
     if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('404 Not Found'); return; }
-    res.writeHead(200, {
+    const { body, encoding } = gzipIfAccepted(req, buf);
+    const headers = {
       'Content-Type': MIME[path.extname(file)] || 'application/octet-stream',
-      'Cache-Control': 'no-store'
-    });
-    res.end(buf);
+      'Cache-Control': 'no-store',
+      'Vary': 'Accept-Encoding',
+      'Content-Length': body.length
+    };
+    if (encoding) headers['Content-Encoding'] = encoding;
+    res.writeHead(200, headers);
+    res.end(body);
   });
 }
 
@@ -420,13 +446,13 @@ const server = http.createServer((req, res) => {
   // ---------- 访问令牌校验 ----------
   if (ACCESS_TOKEN) {
     // 健康检查永远放行，方便监控
-    if (p === '/api/health') { sendJSON(res, { ok: true, uptime: process.uptime() }); return; }
+    if (p === '/api/health') { sendJSON(req, res, { ok: true, uptime: process.uptime() }); return; }
 
     // 微信/第三方域名所有权验证文件（32位十六进制.txt）：即使开启令牌也放行，
     // 否则验证服务器不带令牌会被 403 挡掉，导致域名验证失败
     if (/^\/[0-9a-fA-F]{32}\.txt$/.test(p)) {
       const vf = path.join(DIR, path.normalize(p).replace(/^([/\\])+/, ''));
-      if (vf.startsWith(DIR) && fs.existsSync(vf) && fs.statSync(vf).isFile()) { serveFile(res, vf); return; }
+      if (vf.startsWith(DIR) && fs.existsSync(vf) && fs.statSync(vf).isFile()) { serveFile(req, res, vf); return; }
     }
 
     const cookie = req.headers.cookie || '';
@@ -452,15 +478,15 @@ border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.06
     }
   }
 
-  if (p === '/' || p === '/index.html' || p === '/app') { serveFile(res, HTML_FILE); return; }
+  if (p === '/' || p === '/index.html' || p === '/app') { serveFile(req, res, HTML_FILE); return; }
 
   if (p === '/api/data' || p === '/live-data.json') {
-    sendJSON(res, buildPayload());
+    sendJSON(req, res, buildPayload());
     return;
   }
 
   if (p === '/api/status') {
-    sendJSON(res, {
+    sendJSON(req, res, {
       ok: true,
       updatedAt: STATE.updatedAt,
       updatedAtText: STATE.updatedAt ? new Date(STATE.updatedAt).toLocaleString('zh-CN') : null,
@@ -482,15 +508,15 @@ border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.06
   }
 
   if (p === '/api/refresh') {
-    refreshAll('手动触发').then(r => sendJSON(res, { ok: true, result: r, updatedAt: STATE.updatedAt, notice: STATE.notice }));
+    refreshAll('手动触发').then(r => sendJSON(req, res, { ok: true, result: r, updatedAt: STATE.updatedAt, notice: STATE.notice }));
     return;
   }
 
-  if (p === '/api/health') { sendJSON(res, { ok: true, uptime: process.uptime() }); return; }
+  if (p === '/api/health') { sendJSON(req, res, { ok: true, uptime: process.uptime() }); return; }
 
   // 静态文件
   const f = path.join(DIR, path.normalize(p).replace(/^([/\\])+/, ''));
-  if (f.startsWith(DIR) && fs.existsSync(f) && fs.statSync(f).isFile()) { serveFile(res, f); return; }
+  if (f.startsWith(DIR) && fs.existsSync(f) && fs.statSync(f).isFile()) { serveFile(req, res, f); return; }
 
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('404 Not Found');
