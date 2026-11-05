@@ -43,3 +43,6 @@ cf-worker/public/*.txt
 Thumbs.db
 .DS_Store
 *.swp
+
+# ---------- 独立项目：就医单据夹小程序（单独维护，不并入本仓库） ----------
+/medical-bills/
