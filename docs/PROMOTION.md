@@ -16,7 +16,7 @@
 | Releases | 首个版本打 tag `v1.0.0`，写清功能与合规说明 |
 | Discussions / Issues | 开启，作为反馈与申诉联系入口 |
 | 提交到 Awesome 列表 | 搜索 `awesome-cn`、`HelloGitHub` 等收录开源项目的仓库，按格式提 PR |
-| Gitee 国内镜像 | https://gitee.com/respectfully-mei/lottery-analyzer （待导入，步骤见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
+| Gitee 国内镜像 | https://gitee.com/respectfully-mei/lottery-analyzer （已就绪，维护见 [GITEE_SETUP.md](GITEE_SETUP.md)） |
 
 ## 二、渠道清单（按优先级）
 
@@ -98,3 +98,133 @@
 ## 六、本项目的现实预期
 
 彩票数据分析属于**小众 + 类目敏感**方向，不建议追求大流量。合理目标是：拿到第一批 50~200 个 Star、几个真实 issue 反馈、以及一个可被审核员查证的公开仓库（对 [申诉](APPEAL.md) 也有帮助）。**ICP 备案与平台风险标记**是推广之外更要优先解决的访问门槛。
+
+---
+
+## 七、补充渠道（初版未点名，按性价比排序）
+
+### 1. 阮一峰《科技爱好者周刊》—— 中文圈性价比最高
+
+每周五发布，偏好「小巧、有趣、打开就能用」的开源工具，与本项目「单文件零依赖」高度契合。投稿走 `ruanyf/weekly` 仓库的 issue / 推荐区，格式固定为：**项目名 + 一句话 + 链接 + 为什么值得看**。被收录一次带来的长尾曝光，远超自己发十篇。模板见第八节 B。
+
+### 2. Gitee / 开源中国生态（刚建好镜像，正好用上）
+
+- 开源中国「资讯 / 项目推荐」投稿；
+- Gitee 仓库页开启 Issues、写项目动态，把国内访问者沉淀下来；
+- GVP（Gitee 最有价值开源项目）评选门槛较高，先了解即可，不必强求；
+- 国内访问快，适合作为中文文案里的备用链接。
+
+### 3. 把技术点拆成独立文章（比「介绍整个项目」更容易被收录）
+
+| 选题 | 建议投放 |
+|---|---|
+| 为什么我把 300 期数据内嵌进单个 HTML | 掘金 / 知乎 |
+| 海外 Worker 抓国内官网被 WAF 拦截：边缘缓存 + 本机推送的架构取舍 | 掘金 / InfoQ / SegmentFault |
+| 用 Tesseract.js 在浏览器做行级文字识别：干扰行排除与本地化处理 | 掘金 / SegmentFault |
+
+每篇讲清「问题 → 做法 → 踩坑 → 取舍」，文末放仓库链接 + 免责声明，**不要写成项目广告**。
+
+### 4. 回答式 SEO（长尾最稳、几乎零成本）
+
+在知乎 / SegmentFault 搜索「开奖数据 统计」「数据可视化 单文件」等已有问题，写正经技术回答再带链接；CSDN / 博客园发带完整思路的文章，不要只贴裸链接。这类内容半年后还在带来访问。
+
+### 5. 英文社区补充（初版只列了 HN / Reddit / PH）
+
+`dev.to`、`Hashnode`、`Lobste.rs` 对「单文件 / 离线优先 / 零依赖」这类工程话题友好；目录站 `AlternativeTo`、`SaaSHub` 提交时务必归类为**数据分析工具**，不要被归进博彩导航。
+
+### 6. GitHub 自身再挖一层
+
+- 打 `v1.0.0` Release，写清功能与合规说明；
+- Discussions 开「Show and tell」，沉淀用户反馈；
+- README 徽章 + Social preview 截图 —— **截图里不要出现任何号码组合或参考组合类字样**；
+- Topics 按 [GITHUB_SETUP.md](GITHUB_SETUP.md) 补齐，更容易被站内搜索与 Trending 捞到（Trending 无法主动提交，但前 48 小时的 star 节奏与 Topics 会影响它）。
+
+---
+
+## 八、可直接复制的文案
+
+以下均为技术向口径、自带免责声明，可直接用或微调。**不要加入预测、荐号、提高中奖率类表述。**
+
+### A. V2EX「分享创造」
+
+标题：
+
+```text
+用单个 HTML 文件做了个彩票历史数据统计工具，零依赖、可离线
+```
+
+正文：
+
+```text
+最近想看开奖号码的频次、遗漏和走势，官方只有列表，就自己写了个单文件 HTML。
+
+- 单个文件、零依赖、零后端，双击就能用；没网也有内嵌的 300 期快照
+- 六大彩种，30/50/100 期频次、遗漏、走势、奇偶和值、图表
+- 拍照识别用 Tesseract.js 在浏览器本地跑，按行识别，不上传任何图片
+- 想要手机随时看，可选配 Cloudflare Worker + KV：国内本机抓数推到边缘，手机读缓存
+
+架构上踩过一个坑：海外 Worker 直接抓国内官网会被 WAF 403，所以改成
+「本机抓数 → 推边缘 KV → 手机读缓存」，边缘完全不抓官网。
+另外做了页面短缓存 + 请求超时重试 + 内嵌快照兜底，跨洋链路波动时也不会白屏。
+
+代码 MIT 开源，欢迎审查：
+GitHub: https://github.com/jingmei/lottery-analyzer
+Gitee : https://gitee.com/respectfully-mei/lottery-analyzer
+在线  : https://maicaipiao.top
+
+说明：只是历史数据的整理与可视化，彩票开奖是独立随机事件，不存在可预测规律；
+不构成投注建议，不销售彩票、不收费、不含广告，也不收集任何个人信息。
+```
+
+### B. 阮一峰周刊投稿格式
+
+```text
+项目：彩票历史数据统计分析工具
+链接：https://github.com/jingmei/lottery-analyzer
+一句话：一个单文件、零依赖、可离线使用的彩票开奖数据可视化工具。
+推荐理由：把 300 期历史数据直接内嵌进 HTML，双击即用；拍照识别与图表都在浏览器
+本地完成，不上传任何数据。实现上还处理了「海外边缘节点抓国内官网被 WAF 拦截」
+这个架构问题，改成本机抓数推到 KV 的边缘缓存方案，代码很短，适合当单文件前端
+与边缘计算的入门读物。
+```
+
+### C. Show HN
+
+标题：
+
+```text
+Show HN: A single-file, offline-first lottery data analyzer (no backend)
+```
+
+正文：
+
+```text
+I wanted frequency/omission charts for public lottery draw results, so I built a single
+self-contained HTML file: charts, a 300-draw embedded snapshot, and OCR-based number entry
+(Tesseract.js, all local, nothing uploaded). No build step, no dependencies, works from file://.
+
+Optional public mode uses Cloudflare Worker + KV. One thing I learned the hard way: a Worker
+on overseas edge IPs gets 403 from the Chinese official data sources (WAF), so the fetch runs
+on a machine inside China and pushes to KV; phones only read the edge cache.
+
+MIT:  https://github.com/jingmei/lottery-analyzer
+Demo: https://maicaipiao.top
+
+Note: this is historical data analysis only. Draws are independent random events; no
+prediction claims, no betting features, no ads, no data collection.
+```
+
+### D. Product Hunt
+
+- Tagline：`A single HTML file for lottery draw data analysis — offline, zero dependencies`
+- First comment：讲动机、架构取舍、合规边界，附 GitHub 链接与免责声明；不要写任何暗示提升中奖概率的表述。
+
+---
+
+## 九、现阶段节奏（2026-11-05）
+
+- **全部链接已是实链**：GitHub、Gitee 镜像、`https://maicaipiao.top` 均返回 200，可放心写进文案。
+- **申诉期间的主链接策略**：华为手机自带浏览器的风险提示仍在复审（预计 2~3 工作日）。这段时间推广**主推 GitHub / Gitee 仓库地址**，把站点放在「在线 Demo」次要位置 —— 否则部分华为用户点进去会看到拦截页，转化白白打折。申诉通过后再把站点提到主位，并补小红书 / B站 / 公众号等面向普通用户的内容。
+- **本周建议只做三件**：① 阮一峰周刊投稿 ② V2EX「分享创造」 ③ 掘金发一篇技术拆解（三选二也行）。先拿到第一批真实反馈，再决定是否铺量。
+- **不要碰**：彩票 / 博彩论坛与导航站、买量、用「预测」「荐号」「提高中奖率」做 SEO 关键词、短时间密集重复发帖。这类操作对类目敏感项目不仅无效，还可能反过来加重平台的风险标记。
+- 每篇文末固定附免责声明，口径与 [COMPLIANCE.md](COMPLIANCE.md)、`cf-worker/public/about.html` 保持一致。

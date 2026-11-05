@@ -8,7 +8,7 @@
 [![Single file](https://img.shields.io/badge/frontend-single%20html-orange.svg)](lottery-analyzer.html)
 
 > **开源仓库**：https://github.com/jingmei/lottery-analyzer
-> **Gitee 镜像**：https://gitee.com/respectfully-mei/lottery-analyzer （仓库待导入，见 [GITEE_SETUP.md](docs/GITEE_SETUP.md)）
+> **Gitee 镜像**：https://gitee.com/respectfully-mei/lottery-analyzer （已同步，见 [GITEE_SETUP.md](docs/GITEE_SETUP.md)）
 > **在线站点**：https://maicaipiao.top
 > 代码以 MIT 许可证开源，欢迎审查与反馈；仓库 Issues 也可用于风险提示误报申诉。
 

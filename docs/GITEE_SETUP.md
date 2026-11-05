@@ -11,13 +11,14 @@
 | 昵称 | 敬美 |
 | 个人主页 | https://gitee.com/respectfully-mei （实链，已验证 200） |
 | 镜像仓库 | `https://gitee.com/respectfully-mei/lottery-analyzer` |
-| 当前状态 | `gitee.com/api/v5/repos/respectfully-mei/lottery-analyzer` 返回 **404 → 仓库尚未创建** |
+| 当前状态 | **已创建并可访问**（2026-11-05 复测 API 返回 **200**）；GitHub 主仓库与 Gitee 镜像均已就绪 |
 | GitHub 主仓库 | https://github.com/jingmei/lottery-analyzer （`main` 分支） |
 | 站点 | https://maicaipiao.top |
 
 > 账号已由 Gitee OpenAPI 核实：`login=respectfully-mei`、`name=敬美`。
 > 注意不要把「敬美」当成用户名、也不要沿用 GitHub 的 `jingmei` —— 两个平台用户名不同。
-> 仓库未创建期间不要把这个地址当成可访问实链，按第 1 节先创建/导入。
+> 2026-11-05 复测两处仓库均返回 200，上面的地址可直接写进推广文案与申诉材料。
+> 若需要重建仓库或换账号，再按第 1 节重新导入。
 
 ## 1. 重要结论：Gitee Pages 已下线，别用它发网页
 
