@@ -204,41 +204,26 @@ async function build(prev) {
   };
 }
 
-// Cloudflare 不会自动压缩「Worker 运行时生成的响应体」（只对 Static Assets / 回源做压缩），
-// 所以 /api/data 这类 JSON 必须自行压缩，否则 284KB 裸传会在弱网/跨洋链路下长时间挂起。
-// 注意：Web 标准 CompressionStream 只支持 gzip / deflate / deflate-raw，不支持 br；
-// 浏览器虽在 Accept-Encoding 带 br，但只能由我们出 gzip（实测 282KB JSON → 37KB，约 13%）。
-// 协商策略：客户端接受 gzip 则用 gzip，否则接受 deflate 用 deflate，都不支持就原样返回。
-async function compressText(text, request) {
-  const ae = ((request && request.headers && request.headers.get('Accept-Encoding')) || '').toLowerCase();
-  let enc = null;
-  if (ae.indexOf('gzip') >= 0) enc = 'gzip';
-  else if (ae.indexOf('deflate') >= 0) enc = 'deflate';
-  if (!enc) return { body: text, encoding: null };
-  try {
-    const cs = new CompressionStream(enc);
-    const writer = cs.writable.getWriter();
-    writer.write(new TextEncoder().encode(text));
-    writer.close();
-    const buf = await new Response(cs.readable).arrayBuffer();
-    return { body: buf, encoding: enc };
-  } catch (e) {
-    return { body: text, encoding: null };
-  }
-}
-
-async function json(obj, request, extraHeaders, status) {
-  const text = typeof obj === 'string' ? obj : JSON.stringify(obj);
-  const { body, encoding } = await compressText(text, request);
-  const headers = Object.assign({
-    'Content-Type': 'application/json; charset=utf-8',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
-    'Cache-Control': 'no-store',
-    'Vary': 'Accept-Encoding'
-  }, extraHeaders || {});
-  if (encoding) headers['Content-Encoding'] = encoding;
-  return new Response(body, { status: status || 200, headers });
+// 不要在 Worker 里自行压缩响应体。
+// Cloudflare 边缘会对经过它的响应（包括 Worker 运行时生成的 JSON）自动做 br/gzip
+// 压缩并正确设置 Content-Encoding。若 Worker 再用 CompressionStream 压一次，边缘会
+// 叠加成「双重 gzip」，但响应头只声明一层，浏览器解开后仍是二进制乱码，JSON.parse
+// 抛错 → 前端误判为「官方数据源暂未同步」并回退到内嵌的旧快照（2026/11/05 实测：
+// 手动压缩时手机与电脑访问 maicaipiao.top 都停在 124 期，而直连本机 8080 正常）。
+// 因此这里只返回纯文本，压缩完全交给 Cloudflare（实测 284KB → 约 37KB，收益不变）。
+// 注：本地 server.js 不经过 Cloudflare，那里保留单层 gzip 不受影响。
+// request 参数保留以兼容所有调用点，但不再参与编码协商。
+function json(obj, request, extraHeaders, status) {
+  return new Response(typeof obj === 'string' ? obj : JSON.stringify(obj), {
+    status: status || 200,
+    headers: Object.assign({
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': '*',
+      'Cache-Control': 'no-store',
+      'Vary': 'Accept-Encoding'
+    }, extraHeaders || {})
+  });
 }
 
 // 统一清洗对外 payload：
@@ -328,7 +313,9 @@ export default {
     if (p === '/api/data' || p === '/live-data.json') {
       if (env.LOTTERY_KV) {
         const s = await env.LOTTERY_KV.get('data');
-        if (s) return json(sanitize(JSON.parse(s)), request, { 'Cache-Control': 'public, max-age=30' });
+        // 动态数据不缓存：曾经因缓存了「已压缩体」却在部分请求上缺失编码头，
+        // 导致浏览器拿到二进制乱码。Cloudflare 仍会自动压缩传输，体积不受影响。
+        if (s) return json(sanitize(JSON.parse(s)), request);
       }
       // KV 尚无数据：绝不在边缘现场抓（海外 IP 抓 cwl.gov.cn 必被网宿 403），
       // 返回空 data 让页面使用内嵌快照，并给出人话提示
