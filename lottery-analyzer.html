@@ -1292,7 +1292,7 @@
             <p>2026年最新真实数据 · 概率分析 · 理性选号</p>
             <div id="live-status" style="margin-top:12px;display:flex;flex-wrap:wrap;gap:10px;justify-content:center;align-items:center;font-size:0.82em;">
                 <span id="live-badge" style="padding:5px 14px;border-radius:20px;background:rgba(255,255,255,0.18);color:#fff;font-weight:600;">
-                    📡 等待首次同步
+                    📡 数据更新于 2026/11/5 16:04:22
                 </span>
                 <span id="live-time" style="opacity:0.85;"></span>
                 <span id="live-countdown" style="opacity:0.85;"></span>
@@ -1977,7 +1977,7 @@
             }
         };
 
-        // ==================== 官方真实历史数据（各 300 期 · 导出于 2026/11/5 15:04:09） ====================
+        // ==================== 官方真实历史数据（各 300 期 · 导出于 2026/11/5 16:04:22） ====================
         const REAL_DATA = {
             // 双色球 官方真实数据 300 期（2026-11-03 ~ 2024-11-10）
             ssq: [
@@ -9636,6 +9636,34 @@
             retryTimer: null     // 断线后的自动重连
         };
 
+        // 上次成功同步的数据落盘：刷新页面 / 切换网络 / 关掉 VPN 后无需重新等待「首次同步」，
+        // 直接展示上一次已拿到的开奖数据与其更新时间，后台再静默检查是否有新数据。
+        // 注意：HTTP 请求仍为 no-store（避免拿到过期代理缓存），这里只是浏览器本地副本。
+        // SNAPSHOT_AT 是页面内嵌快照的导出时间，由 scripts/refresh_snapshot.js 生成快照时同步维护。
+        const SNAPSHOT_AT = 1793865862830;
+        const LIVE_CACHE_KEY = 'maicaipiao.liveData.v1';
+        function saveLiveCache(json) {
+            try {
+                if (!json || !json.data || !Object.keys(json.data).length) return;
+                localStorage.setItem(LIVE_CACHE_KEY, JSON.stringify({
+                    data: json.data,
+                    updatedAt: json.updatedAt || Date.now(),
+                    savedAt: Date.now()
+                }));
+            } catch (e) { /* 隐私模式 / 配额不足：忽略即可，不影响本次展示 */ }
+        }
+        function restoreLiveCache() {
+            try {
+                const raw = localStorage.getItem(LIVE_CACHE_KEY);
+                if (!raw) return false;
+                const c = JSON.parse(raw);
+                if (!c || !c.data || !Object.keys(c.data).length) return false;
+                LIVE_DATA = c.data;
+                LIVE.updatedAt = c.updatedAt || null;
+                return true;
+            } catch (e) { return false; }
+        }
+
         function setBadge(html, bg, color) {
             const b = document.getElementById('live-badge');
             if (!b) return;
@@ -9668,15 +9696,16 @@
             // 刷新按钮始终可点：即使暂未连上实时同步，也可手动重试（页面始终有可用数据）
             if (btn) btn.style.display = 'inline-block';
             if (!t) return;
-            if (LIVE.connected) {
-                const age = LIVE.updatedAt ? `数据更新于 ${new Date(LIVE.updatedAt).toLocaleString('zh-CN')}` : '等待首次同步';
-                // 提示只展示最新一次成功更新的时间（updatedAt），不显示「未取到/限流」
+            // 只要已有成功同步过的数据（本次拉取或浏览器保存的上次结果），就只展示它的更新时间。
+            // 不再出现「等待首次同步 / 未取到 / 官方数据源暂未同步」等会让用户以为需要重新刷的文案。
+            if (LIVE.updatedAt) {
+                const age = `数据更新于 ${new Date(LIVE.updatedAt).toLocaleString('zh-CN')}`;
                 t.textContent = LIVE.notice
                     ? `📡 ${age}　·　ℹ️ ${LIVE.notice}`
                     : `📡 ${age}`;
             } else {
-                // 异常时只说明「官方数据源暂未同步」，不暗示站点/服务中断，避免用户误以为断网
-                t.textContent = '📡 当前展示最近可用的开奖数据（官方数据源暂未同步）';
+                // 从未同步过（首次打开且无任何缓存）：仅说明数据来源，不暗示服务中断
+                t.textContent = '📡 当前展示最近可用的开奖数据';
             }
         }
 
@@ -9687,7 +9716,8 @@
                 setBadge('📡 数据更新于 ' + new Date(LIVE.updatedAt).toLocaleString('zh-CN'),
                     'rgba(255,255,255,0.95)', '#1a7f37');
             } else {
-                setBadge('📡 等待首次同步', 'rgba(255,255,255,0.9)', '#8a6d00');
+                setBadge('📡 数据更新于 ' + new Date(SNAPSHOT_AT).toLocaleString('zh-CN'),
+                    'rgba(255,255,255,0.95)', '#1a7f37');
             }
         }
 
@@ -9713,15 +9743,18 @@
                 if (!json.ok) throw new Error('服务返回异常');
                 const hasData = !!(json.data && Object.keys(json.data).length);
 
-                if (hasData) LIVE_DATA = json.data;   // 尚无同步数据时保留页面内嵌快照
+                if (hasData) {
+                    LIVE_DATA = json.data;   // 尚无同步数据时保留页面内嵌快照
+                    saveLiveCache(json);      // 落盘：下次刷新/断网/切网络时直接可用
+                }
                 LIVE.connected = true;
-                LIVE.updatedAt = json.updatedAt;
+                LIVE.updatedAt = json.updatedAt || SNAPSHOT_AT;
                 LIVE.nextAt = json.nextAt || (Date.now() + (json.intervalMs || 3600000));
                 LIVE.intervalMs = json.intervalMs || 3600000;
                 LIVE.errors = json.errors || [];
                 LIVE.notice = json.notice || null;
 
-                setBadge('🟢 实时数据服务已连接', 'rgba(255,255,255,0.95)', '#1a7f37');
+                showDataTimeBadge();   // 只展示数据更新时间
                 renderLiveMeta();
 
                 if (hasData) updateLottery(currentType);   // 用新数据重绘当前彩种
@@ -9766,8 +9799,9 @@
                     'rgba(255,255,255,0.95)', '#1a7f37');
             } catch (e) {
                 LIVE.connected = false;
-                // 异常时归因于「官方数据源未同步」，不提示服务中断类文案
-                setBadge('🟡 官方数据源暂未同步，显示最近可用数据', 'rgba(255,255,255,0.9)', '#b26a00');
+                // 已有上次成功同步的数据：只展示它的更新时间，后台静默重试。
+                // 不出现「未同步 / 联网恢复后自动更新」等暗示需要重新刷的文案。
+                showDataTimeBadge();
                 renderLiveMeta();
                 startReconnect();
             } finally {
@@ -9791,8 +9825,13 @@
 
         // ==================== 初始化 ====================
         document.addEventListener('DOMContentLoaded', async function() {
-            // 先用内嵌快照渲染，保证秒开
+            // 先恢复「上次成功同步的数据」并渲染：刷新页面 / 关掉 VPN / 切换网络时，
+            // 首屏立刻就是上次刷好的开奖数据和它的更新时间，不会重新等待首次同步。
+            restoreLiveCache();
+            if (!LIVE.updatedAt) LIVE.updatedAt = SNAPSHOT_AT;
             updateLottery('ssq');
+            showDataTimeBadge();
+            renderLiveMeta();
 
             // 三大页签：恢复上次停留的页签
             try { initViewTabs(); } catch (e) { }
@@ -9803,13 +9842,13 @@
                 // 仅保留页面打开时的本地数据刷新，不申请系统通知权限。
             } catch (e) { }
 
-            // 尝试连接实时数据服务（通过 file:// 直接打开时会失败，自动回退快照）
+            // 后台连接实时数据服务：首屏已用缓存/快照渲染完成，这里失败也不影响已展示的数据
             try {
                 await pullLiveData();
             } catch (e) {
                 LIVE.connected = false;
-                // 异常时归因于「官方数据源未同步 / 联网恢复后自动更新」，不提示服务中断类文案
-                setBadge('🟡 展示最近可用的开奖数据（联网恢复后自动更新）', 'rgba(255,255,255,0.9)', '#b26a00');
+                // 只展示数据更新时间，后台静默重试；不出现「等待首次同步 / 需要重新刷新」类文案
+                showDataTimeBadge();
                 renderLiveMeta();
                 startReconnect();
                 return;
