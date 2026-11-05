@@ -9707,7 +9707,9 @@
         async function pullLiveData(attempt) {
             attempt = attempt || 0;
             try {
-                const json = await fetchJSON('/api/data?t=' + Date.now(), 8000);
+                // 弱网/跨洋链路下 /api/data 即使 gzip 后也需十几到几十秒才能传完，
+                // 超时放宽到 45s，避免慢链路还没传完就被判失败、回退到内嵌旧快照
+                const json = await fetchJSON('/api/data?t=' + Date.now(), 45000);
                 if (!json.ok) throw new Error('服务返回异常');
                 const hasData = !!(json.data && Object.keys(json.data).length);
 
@@ -9737,7 +9739,7 @@
         // 轮询服务端，发现数据已更新则重新拉取
         async function pollStatus() {
             try {
-                const s = await fetchJSON('/api/status?t=' + Date.now(), 5000);
+                const s = await fetchJSON('/api/status?t=' + Date.now(), 20000);
                 if (!s.ok) return;
                 LIVE.nextAt = s.nextAt || null;
                 LIVE.intervalMs = s.intervalMs || LIVE.intervalMs;
