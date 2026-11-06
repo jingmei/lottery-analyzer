@@ -12,10 +12,18 @@ REM
 REM  Strategy: every 60 min; after each draw every 10 min until a
 REM  new issue number is fetched (max +80 min).
 REM
+REM  Usage:
+REM    start_lottery.bat        normal window (double-click)
+REM    start_lottery.bat --bg   background/autostart: log to logs\server.log,
+REM                             restart automatically if the backend exits
+REM
 REM  Pure ASCII file. Do NOT put Chinese chars in this file.
 REM ============================================================
 setlocal
 cd /d "%~dp0"
+
+set "BG=0"
+if /i "%~1"=="--bg" set "BG=1"
 
 set "NODE=C:\Users\jingmei\.workbuddy\binaries\node\versions\22.22.2-6\node.exe"
 set "EDGE_ORIGIN=https://maicaipiao.top"
@@ -38,6 +46,15 @@ if "%PUSH_TOKEN%"=="" (
   set "PUSH_URL=%EDGE_ORIGIN%/api/push?token=%PUSH_TOKEN%"
 )
 
+REM --- already running? then just report, do not fight for the port ---
+curl -s -o NUL --max-time 3 http://127.0.0.1:8080/api/status
+if not errorlevel 1 (
+  echo Backend already running on port 8080 - nothing to do.
+  echo   http://127.0.0.1:8080
+  if "%BG%"=="0" "%SystemRoot%\System32\timeout.exe" /t 3 >nul
+  goto :eof
+)
+
 echo ============================================================
 echo   Lottery Analyzer - local data fetcher
 echo   Public URL : %EDGE_ORIGIN%
@@ -46,8 +63,19 @@ echo   Keep this window open. PC must stay on for auto updates.
 echo ============================================================
 echo.
 echo Starting backend on port 8080 ...
-"%NODE%" server.js 8080
 
+if "%BG%"=="1" goto :bgloop
+
+"%NODE%" server.js 8080
 echo.
 echo Backend exited. Press any key to close.
 pause >nul
+goto :eof
+
+:bgloop
+if not exist "logs" mkdir "logs"
+:restart
+"%NODE%" server.js 8080
+echo [%date% %time%] backend exited, restarting in 30s
+"%SystemRoot%\System32\timeout.exe" /t 30 >nul
+goto restart

@@ -17,6 +17,57 @@ const path = require('path');
 const os = require('os');
 const zlib = require('zlib');
 
+const DIR = __dirname;
+
+// ==================== 本地配置与日志 ====================
+// 读取同目录 .env（若存在）。这样 `node server.js` 与 start_lottery.bat 行为一致，
+// 计划任务可以直接调用 node，无需任何包装脚本。
+// 优先级：已存在的环境变量 > .env > 代码默认值。
+function loadEnvFile() {
+  let txt;
+  try { txt = fs.readFileSync(path.join(DIR, '.env'), 'utf8'); } catch (e) { return; }
+  for (const line of txt.split(/\r?\n/)) {
+    const s = line.trim();
+    if (!s || s.startsWith('#')) continue;
+    const i = s.indexOf('=');
+    if (i < 1) continue;
+    const k = s.slice(0, i).trim();
+    const v = s.slice(i + 1).trim().replace(/^["']|["']$/g, '');
+    if (k && !process.env[k]) process.env[k] = v;
+  }
+}
+loadEnvFile();
+
+// .env 里存的是 PUSH_TOKEN + EDGE_ORIGIN，拼出完整推送地址
+if (!process.env.PUSH_URL && process.env.PUSH_TOKEN && process.env.EDGE_ORIGIN) {
+  process.env.PUSH_URL = process.env.EDGE_ORIGIN.replace(/\/+$/, '') + '/api/push?token=' + process.env.PUSH_TOKEN;
+}
+
+// 运行日志同时落盘 logs/server.log，便于后台/计划任务方式运行时排查。
+// 超过 2MB 自动轮转一份 server.log.1，避免无限增长。
+let logStream = null;
+try {
+  const logDir = path.join(DIR, 'logs');
+  fs.mkdirSync(logDir, { recursive: true });
+  const logFile = path.join(logDir, 'server.log');
+  try {
+    if (fs.statSync(logFile).size > 2 * 1024 * 1024) {
+      const bak = path.join(logDir, 'server.log.1');
+      try { fs.unlinkSync(bak); } catch (e) { /* 不存在则忽略 */ }
+      fs.renameSync(logFile, bak);
+    }
+  } catch (e) { /* 首次运行没有日志文件 */ }
+  logStream = fs.createWriteStream(logFile, { flags: 'a' });
+} catch (e) { logStream = null; }
+
+const consoleLog = console.log.bind(console);
+console.log = (...args) => {
+  consoleLog(...args);
+  try {
+    if (logStream) logStream.write('[' + new Date().toLocaleString('zh-CN') + '] ' + args.join(' ') + '\n');
+  } catch (e) { /* 写日志失败不影响主流程 */ }
+};
+
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 const REFRESH_MS = Number(process.env.REFRESH_MIN || 60) * 60 * 1000;
 const FETCH_COUNT = Number(process.env.FETCH_COUNT || 300);   // 默认拉 300 期（分析窗口 30/50/100 需要足够样本）
@@ -28,10 +79,9 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN || '';
 
 // 边缘推送（备用方案，默认关闭）：把数据推到 Cloudflare Worker，供不开 VPN 时访问
 // 需要启用时：PUSH_URL="https://你的域名/api/push?token=<PUSH_TOKEN>" node server.js
-// 推荐把 PUSH_TOKEN 放在本地 .env 中，由 start_lottery.bat 读取，避免密钥入库。
+// 推荐把 PUSH_TOKEN 放在本地 .env 中（server.js 启动时会自动读取），避免密钥入库。
 const PUSH_URL = process.env.PUSH_URL || '';
 
-const DIR = __dirname;
 const HTML_FILE = path.join(DIR, 'lottery-analyzer.html');
 const CACHE_FILE = path.join(DIR, 'live-data.json');
 

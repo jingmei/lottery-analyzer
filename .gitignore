@@ -49,3 +49,6 @@ Thumbs.db
 
 # ---------- WorkBuddy 应用预览标记（工具内部使用） ----------
 /*.genie
+
+# 运行日志（server.js 自动写入）
+/logs/
