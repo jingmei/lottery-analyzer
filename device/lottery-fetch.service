@@ -1,0 +1,10 @@
+[Unit]
+Description=Lottery data fetcher (fetch official draws and push to edge KV)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/lottery
+ExecStart=/usr/bin/node /opt/lottery/fetch-push.js
+TimeoutStartSec=300

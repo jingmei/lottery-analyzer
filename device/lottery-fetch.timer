@@ -1,0 +1,13 @@
+[Unit]
+Description=Run lottery data fetcher three times a day
+
+[Timer]
+# 每天 09:00、15:00、21:40（21:40 在当日全部彩种开奖之后）
+OnCalendar=*-*-* 09:00:00
+OnCalendar=*-*-* 15:00:00
+OnCalendar=*-*-* 21:40:00
+Persistent=true
+RandomizedDelaySec=60
+
+[Install]
+WantedBy=timers.target

@@ -52,3 +52,7 @@ Thumbs.db
 
 # 运行日志（server.js 自动写入）
 /logs/
+
+# 常开设备抓取器：本地配置与日志（含推送密钥）
+/device/config.json
+/device/*.log

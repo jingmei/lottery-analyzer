@@ -1,0 +1,7 @@
+{
+  "_说明": "复制为 config.json 后填写；config.json 已被 .gitignore 忽略，不会进仓库",
+  "edgeOrigin": "https://maicaipiao.top",
+  "pushToken": "在这里填 .env 里的 PUSH_TOKEN，两者必须一致",
+  "fetchCount": 300,
+  "logFile": "fetch.log"
+}
