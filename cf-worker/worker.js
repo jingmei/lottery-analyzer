@@ -403,11 +403,11 @@ export default {
     const isHtml = assetRes.status === 200 && (ct.indexOf('text/html') >= 0 || p === '/' || /\.html?$/.test(p));
     if (!isHtml) return assetRes;
 
-    // 首页注入最新数据：并行读 KV，注入成功则首屏即最新开奖
+    // 首页注入最新数据：clone 后再读取文本，保证注入失败时原响应体仍可原样回退
     let htmlBody = null;
     try {
       const [htmlText, kvRaw] = await Promise.all([
-        assetRes.text(),
+        assetRes.clone().text(),
         env.LOTTERY_KV ? env.LOTTERY_KV.get('data') : Promise.resolve(null)
       ]);
       if (kvRaw) {
@@ -426,6 +426,12 @@ export default {
     h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     h.set('X-Frame-Options', 'SAMEORIGIN');
     h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+    if (htmlBody !== null) {
+      // 注入后正文长度/哈希都变了，必须移除原静态资源的长度与校验头
+      h.delete('Content-Length');
+      h.delete('Content-Encoding');
+      h.delete('ETag');
+    }
     return new Response(htmlBody !== null ? htmlBody : assetRes.body, {
       status: assetRes.status,
       statusText: assetRes.statusText,
