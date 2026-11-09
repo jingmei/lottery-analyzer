@@ -451,6 +451,38 @@ async function refreshAll(reason, onlyTypes) {
 // ==================== HTTP 服务 ====================
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.ico': 'image/x-icon' };
 
+// 把最新数据注入首页 HTML 的内嵌快照（REAL_DATA + SNAPSHOT_AT）。
+// 与 cf-worker/worker.js 中同名逻辑保持一致；任何异常都返回 null（调用方回退原 HTML）。
+function injectSnapshot(htmlText, payload) {
+  try {
+    if (!payload || !payload.data || !Object.keys(payload.data).length) return null;
+    const marker = 'const REAL_DATA = {';
+    const start = htmlText.indexOf(marker);
+    if (start < 0) return null;
+    const objStart = start + marker.length - 1;
+    let depth = 0, inStr = false, esc = false, end = -1;
+    for (let i = objStart; i < htmlText.length; i++) {
+      const ch = htmlText[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    if (end < 0) return null;
+    let out = htmlText.slice(0, start) + 'const REAL_DATA = ' + JSON.stringify(payload.data) + htmlText.slice(end + 1);
+    const at = payload.updatedAt || Date.now();
+    out = out.replace(/const SNAPSHOT_AT = \d+;/, 'const SNAPSHOT_AT = ' + at + ';');
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
 // 客户端支持 gzip 时压缩响应体：本地 server.js 与线上 Worker 行为对齐，
 // 避免 /api/data 这类大 JSON 裸传导致弱网下长时间「连接中」。
 function gzipIfAccepted(req, buf) {
@@ -528,7 +560,26 @@ border:1px solid #e5e7eb;border-radius:14px;box-shadow:0 4px 20px rgba(0,0,0,.06
     }
   }
 
-  if (p === '/' || p === '/index.html' || p === '/app') { serveFile(req, res, HTML_FILE); return; }
+  if (p === '/' || p === '/index.html' || p === '/app') {
+    // 首页注入最新数据：首次打开无需等 /api/data 就显示最新开奖，
+    // 弱网/微信内置浏览器拉不到接口时也不会停留在构建时的旧快照
+    fs.readFile(HTML_FILE, (err, buf) => {
+      if (err) { res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }); res.end('404 Not Found'); return; }
+      let html = buf.toString('utf8');
+      html = injectSnapshot(html, buildPayload()) || html;
+      const { body, encoding } = gzipIfAccepted(req, Buffer.from(html, 'utf8'));
+      const headers = {
+        'Content-Type': 'text/html; charset=utf-8',
+        'Cache-Control': 'no-store',
+        'Vary': 'Accept-Encoding',
+        'Content-Length': body.length
+      };
+      if (encoding) headers['Content-Encoding'] = encoding;
+      res.writeHead(200, headers);
+      res.end(body);
+    });
+    return;
+  }
 
   if (p === '/api/data' || p === '/live-data.json') {
     sendJSON(req, res, buildPayload());

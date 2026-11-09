@@ -2,7 +2,7 @@
  * 彩票历史数据统计分析 —— Cloudflare Worker 边缘版
  * ------------------------------------------------------------
  * 架构：国内本机抓取官方公开开奖数据 -> POST /api/push -> Worker KV -> 手机读边缘缓存
- *   1. 静态页面由边缘 assets 直出（HTML 允许短时缓存，弱网下二次打开可秒开）
+ *   1. 静态页面由边缘 assets 直出，返回首页时把 KV 最新数据注入内嵌快照（首屏即最新开奖）
  *   2. /api/data、/api/status 只读 KV；边缘绝不抓官网（海外 IP 会被网宿 WAF 403 拦截）
  *   3. /api/push 接收本机推送，密钥通过 `wrangler secret put PUSH_TOKEN` 配置
  *   4. 页面内嵌 300 期快照，边缘数据不可用时自动回退，不会白屏
@@ -261,6 +261,40 @@ async function getMeta(env) {
   try { return JSON.parse(s); } catch (e) { return null; }
 }
 
+// ---- 首页动态注入 ----
+// 把 KV 里的最新数据直接替换进首页 HTML 的内嵌快照（REAL_DATA + SNAPSHOT_AT），
+// 首次打开（尤其微信内置浏览器/弱网，/api/data 拉不到时）也能直接看到最新开奖，
+// 徽标时间同样是最新，不会停留在构建时的旧快照。注入失败一律回退原静态页。
+function injectSnapshot(htmlText, payload) {
+  try {
+    if (!payload || !payload.data || !Object.keys(payload.data).length) return null;
+    const marker = 'const REAL_DATA = {';
+    const start = htmlText.indexOf(marker);
+    if (start < 0) return null;
+    const objStart = start + marker.length - 1;
+    let depth = 0, inStr = false, esc = false, end = -1;
+    for (let i = objStart; i < htmlText.length; i++) {
+      const ch = htmlText[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (ch === '\\') esc = true;
+        else if (ch === '"') inStr = false;
+        continue;
+      }
+      if (ch === '"') inStr = true;
+      else if (ch === '{') depth++;
+      else if (ch === '}') { depth--; if (depth === 0) { end = i; break; } }
+    }
+    if (end < 0) return null;
+    let out = htmlText.slice(0, start) + 'const REAL_DATA = ' + JSON.stringify(payload.data) + htmlText.slice(end + 1);
+    const at = payload.updatedAt || Date.now();
+    out = out.replace(/const SNAPSHOT_AT = \d+;/, 'const SNAPSHOT_AT = ' + at + ';');
+    return out;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ---- 上游连通性自检 ----
 async function probe() {
   const tests = [
@@ -369,15 +403,30 @@ export default {
     const isHtml = assetRes.status === 200 && (ct.indexOf('text/html') >= 0 || p === '/' || /\.html?$/.test(p));
     if (!isHtml) return assetRes;
 
+    // 首页注入最新数据：并行读 KV，注入成功则首屏即最新开奖
+    let htmlBody = null;
+    try {
+      const [htmlText, kvRaw] = await Promise.all([
+        assetRes.text(),
+        env.LOTTERY_KV ? env.LOTTERY_KV.get('data') : Promise.resolve(null)
+      ]);
+      if (kvRaw) {
+        const payload = JSON.parse(kvRaw);
+        const injected = injectSnapshot(htmlText, payload);
+        if (injected) htmlBody = injected;
+      }
+    } catch (e) { /* 注入失败：回退原静态页 */ }
+
     // HTML 允许浏览器短时缓存：弱网/跨洋链路下二次打开可直接用本地副本，
-    // 避免每次刷新都重新下载整页导致白屏。API 仍保持 no-store。
+    // 避免每次刷新都重新下载整页导致白屏。SWR 只保留 1 小时（曾经设 1 天，
+    // 导致微信内置浏览器首屏长时间停留在旧快照）。API 仍保持 no-store。
     const h = new Headers(assetRes.headers);
-    h.set('Cache-Control', 'public, max-age=600, stale-while-revalidate=86400');
+    h.set('Cache-Control', 'public, max-age=120, stale-while-revalidate=3600');
     h.set('X-Content-Type-Options', 'nosniff');
     h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
     h.set('X-Frame-Options', 'SAMEORIGIN');
     h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-    return new Response(assetRes.body, {
+    return new Response(htmlBody !== null ? htmlBody : assetRes.body, {
       status: assetRes.status,
       statusText: assetRes.statusText,
       headers: h
