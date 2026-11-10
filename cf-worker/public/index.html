@@ -1789,7 +1789,9 @@
                             <button class="btn-act" onclick="runOcrPaste()">📋 从粘贴的文字提取号码</button>
                         </div>
                         <div id="ocr-out" style="font-size:0.85em;line-height:2;"></div>
-                    <button class="btn-act ghost" onclick="rememberOcrCorrection()">✅ 保存人工校正作为该彩种识别参考</button>
+                        <div id="ocr-bets" style="margin:10px 0;"></div>
+                        <div id="ocr-msg" style="font-size:0.85em;margin-top:6px;"></div>
+                        <button class="btn-act ghost" onclick="rememberOcrCorrection()">✅ 保存人工校正作为该彩种识别参考</button>
                     </div>
                 </div>
 
@@ -8944,6 +8946,39 @@
         // ==================== 中奖录入（手动 / OCR） =========================
         // =====================================================================
         const TK_KEY = 'LA_TICKETS_V1';
+        let TK_SEQ = 0;   // 一次性保存多注时，保证同一毫秒内的 id 也不重复
+
+        // 共用：把若干输入框的原始文字解析成 zones，并做号码个数 / 范围 / 重复校验
+        function parseTicketZones(t, raws) {
+            const zs = getZones(t);
+            const picks = REVIEW_PICKS[t] || [];
+            const zones = [];
+            let err = '';
+            for (let i = 0; i < zs.length; i++) {
+                const raw = String(raws[i] == null ? '' : raws[i]);
+                const nums = raw.split(/[^0-9]+/).filter(s => s.length).map(Number);
+                const need = picks[i] || 1;
+                if (nums.length !== need) { err += zs[i].label + ' 需要 ' + need + ' 个号码（现在 ' + nums.length + ' 个）；'; }
+                nums.forEach(n => { if (!(n >= zs[i].min && n <= zs[i].max)) err += zs[i].label + ' 号码 ' + n + ' 超出 ' + zs[i].min + '~' + zs[i].max + '；'; });
+                if (new Set(nums).size !== nums.length) err += zs[i].label + ' 有重复号码；';
+                zones.push({ label: zs[i].label, nums: nums });
+            }
+            return { zones: zones, err: err };
+        }
+        function ticketIssueError(t, issue) {
+            if (!issue) return '请填写期号；';
+            const published = getRealHistory(t) || [];
+            if (published.some(r => String(r.period) === issue)) return '该期已发布，不能作为新票录入；';
+            return '';
+        }
+        function ticketKey(t, issue, zones) { return JSON.stringify([t, String(issue), zones]); }
+        function ticketRecord(t, issue, zones, amount) {
+            TK_SEQ++;
+            return {
+                id: 'T' + Date.now() + '_' + TK_SEQ + '_' + Math.floor(Math.random() * 10000),
+                type: t, issue: issue, zones: zones, amount: amount, ts: Date.now()
+            };
+        }
 
         function loadTickets() {
             try { return JSON.parse(localStorage.getItem(TK_KEY) || '[]') || []; } catch (e) { return []; }
@@ -9058,31 +9093,17 @@
             const t = (document.getElementById('tk-type') || {}).value || currentType;
             const issue = ((document.getElementById('tk-issue') || {}).value || '').trim();
             const amount = Number((document.getElementById('tk-amount') || {}).value) || 2;
-            const zs = getZones(t);
-            const picks = REVIEW_PICKS[t] || [];
             const inputs = document.querySelectorAll('#tk-nums input[data-zi]');
-            const zones = [];
-            let err = '';
-            for (let i = 0; i < zs.length; i++) {
-                const raw = inputs[i] ? String(inputs[i].value || '') : '';
-                const nums = raw.split(/[^0-9]+/).filter(s => s.length).map(Number);
-                const need = picks[i] || 1;
-                if (nums.length !== need) { err += zs[i].label + ' 需要 ' + need + ' 个号码（现在 ' + nums.length + ' 个）；'; }
-                nums.forEach(n => { if (!(n >= zs[i].min && n <= zs[i].max)) err += zs[i].label + ' 号码 ' + n + ' 超出 ' + zs[i].min + '~' + zs[i].max + '；'; });
-                if (new Set(nums).size !== nums.length) err += zs[i].label + ' 有重复号码；';
-                zones.push({ label: zs[i].label, nums: nums });
-            }
-            if (!issue) err += '请填写期号；';
-            const published = getRealHistory(t) || [];
-            if (published.some(r => String(r.period) === issue)) err += '该期已发布，不能作为新票录入；';
+            const raws = Array.from(inputs).map(i => String(i.value || ''));
+            const parsed = parseTicketZones(t, raws);
+            const zones = parsed.zones;
+            let err = parsed.err;
+            err += ticketIssueError(t, issue);
             const list = loadTickets();
-            if (list.some(x => x.type === t && String(x.issue) === issue && JSON.stringify(x.zones) === JSON.stringify(zones))) err += '相同彩种、期号和号码已录入，不能重复保存；';
+            const key = ticketKey(t, issue, zones);
+            if (list.some(x => ticketKey(x.type, x.issue, x.zones) === key)) err += '相同彩种、期号和号码已录入，不能重复保存；';
             if (err) { tkMsg('❌ ' + err, '#c0392b'); return; }
-            list.unshift({
-                id: 'T' + Date.now() + Math.floor(Math.random() * 1000),
-                type: t, issue: issue, zones: zones,
-                amount: amount, ts: Date.now()
-            });
+            list.unshift(ticketRecord(t, issue, zones, amount));
             saveTickets(list);
             const j = judgeTicket(list[0]);
             tkMsg('✅ 已保存。判定结果：' + (j.state === 'win'
@@ -9169,6 +9190,8 @@
 
         // -------------------- 本地拍照识别（OCR） --------------------
         let OCR_FILE = null;
+        let OCR_HITS = [];      // 最近一次识别到的全部注（每注可编辑、勾选后批量保存）
+        let OCR_TYPE = null;    // 本次识别判定出的彩种
         const OCR_MEMORY_KEY = 'LA_OCR_CORRECTIONS_V1';
         function loadOcrMemory() { try { return JSON.parse(localStorage.getItem(OCR_MEMORY_KEY) || '{}') || {}; } catch (e) { return {}; } }
         function saveOcrCorrection(type, raw, zones) { const m = loadOcrMemory(); m[type] = m[type] || []; m[type].push({ raw: String(raw || '').slice(0, 500), zones: zones, ts: Date.now() }); m[type] = m[type].slice(-20); try { localStorage.setItem(OCR_MEMORY_KEY, JSON.stringify(m)); } catch (e) {} }
@@ -9318,6 +9341,108 @@
             return zones.map(z => z.label + ' ' + z.nums.map(pad2n).join(' '));
         }
 
+        // ---- 识别结果：全部注数列出、可编辑、可勾选后一次性保存 ----
+        function ocrMsg(s, color) {
+            const el = document.getElementById('ocr-msg');
+            if (el) { el.innerHTML = s; el.style.color = color || '#5a6a7a'; }
+        }
+        function renderOcrBets(t, hits, issue) {
+            OCR_HITS = hits || [];
+            OCR_TYPE = t;
+            const box = document.getElementById('ocr-bets');
+            if (!box) return;
+            if (!OCR_HITS.length) { box.innerHTML = ''; ocrMsg(''); return; }
+            const zs = getZones(t);
+            const picks = REVIEW_PICKS[t] || [];
+            const rows = OCR_HITS.map((h, k) => {
+                const inputs = zs.map((z, zi) => {
+                    const val = h.zones[zi] ? h.zones[zi].nums.map(String).join(' ') : '';
+                    return '<span style="font-size:0.76em;color:#7f8c9a;">' + z.label + '</span>'
+                        + '<input class="inp" data-zi="' + zi + '" style="width:' + ((picks[zi] || 1) > 1 ? 180 : 56) + 'px;" value="' + escHtml(val) + '">';
+                }).join(' ');
+                return '<div class="ocr-bet-row" data-bet="' + k + '" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:6px 4px;border-bottom:1px solid #eef1f5;">'
+                    + '<label style="display:flex;align-items:center;gap:3px;font-size:0.8em;white-space:nowrap;">'
+                    + '<input type="checkbox" data-ocr-chk checked onchange="updateOcrSaveLabel()"> #' + (k + 1) + '</label>'
+                    + inputs
+                    + '<button class="btn-act ghost" style="padding:2px 8px;font-size:0.76em;" onclick="fillOcrBetToForm(' + k + ')">填入表单</button>'
+                    + '</div>';
+            }).join('');
+            box.innerHTML = '<div style="border:1px solid #dfe6ee;border-radius:8px;padding:10px;background:#fafcfd;">'
+                + '<div style="font-size:0.86em;font-weight:600;color:#2c3e50;margin-bottom:4px;">🎯 识别到 <b>'
+                + OCR_HITS.length + '</b> 注 · ' + (TK_TYPE_NAMES[t] || t) + ' 第 ' + escHtml(issue) + ' 期</div>'
+                + '<div style="font-size:0.78em;color:#7f8c9a;margin-bottom:6px;">逐注核对号码，可修改、可取消勾选；保存时一次性录入全部勾选的注，相同号码自动跳过。</div>'
+                + rows
+                + '<div class="form-row" style="margin-top:10px;">'
+                + '<label style="min-width:auto;">每注金额(元)</label>'
+                + '<input class="inp" id="ocr-amount" type="number" min="2" step="2" value="2" style="width:80px;" oninput="updateOcrSaveLabel()">'
+                + '<button class="btn-act" id="ocr-save-btn" onclick="saveAllOcrTickets()">💾 保存勾选的 ' + OCR_HITS.length + ' 注并判定</button>'
+                + '<button class="btn-act ghost" onclick="toggleOcrBetsAll(true)">全选</button>'
+                + '<button class="btn-act ghost" onclick="toggleOcrBetsAll(false)">全不选</button>'
+                + '</div></div>';
+            updateOcrSaveLabel();
+        }
+        function ocrCheckedRows() {
+            return Array.prototype.slice.call(document.querySelectorAll('#ocr-bets .ocr-bet-row'))
+                .filter(r => { const c = r.querySelector('input[data-ocr-chk]'); return c && c.checked; });
+        }
+        function updateOcrSaveLabel() {
+            const btn = document.getElementById('ocr-save-btn');
+            if (!btn) return;
+            const n = ocrCheckedRows().length;
+            const amt = Number((document.getElementById('ocr-amount') || {}).value) || 2;
+            btn.textContent = n ? ('💾 保存勾选的 ' + n + ' 注（共 ¥' + fmtMoney(n * amt) + '）并判定') : '💾 请先勾选至少 1 注';
+        }
+        function toggleOcrBetsAll(on) {
+            document.querySelectorAll('#ocr-bets input[data-ocr-chk]').forEach(c => { c.checked = !!on; });
+            updateOcrSaveLabel();
+        }
+        function fillOcrBetToForm(k) {
+            const row = document.querySelector('#ocr-bets .ocr-bet-row[data-bet="' + k + '"]');
+            if (!row) return;
+            const t = OCR_TYPE || ((document.getElementById('tk-type') || {}).value) || currentType;
+            const sel = document.getElementById('tk-type');
+            if (sel && sel.value !== t) { sel.value = t; if (sel.onchange) sel.onchange(); }
+            const raws = Array.prototype.slice.call(row.querySelectorAll('input[data-zi]')).map(i => i.value || '');
+            const parsed = parseTicketZones(t, raws);
+            if (parsed.err) { ocrMsg('❌ #' + (k + 1) + ' ' + parsed.err, '#c0392b'); return; }
+            fillZonesToForm(parsed.zones);
+            ocrMsg('已把 #' + (k + 1) + ' 填入上方手动录入表单，可单独修改后保存。', '#27ae60');
+        }
+        function saveAllOcrTickets() {
+            const rows = ocrCheckedRows();
+            if (!rows.length) { ocrMsg('❌ 请先勾选至少 1 注。', '#c0392b'); return; }
+            const t = OCR_TYPE || ((document.getElementById('tk-type') || {}).value) || currentType;
+            const issue = ((document.getElementById('tk-issue') || {}).value || '').trim();
+            const perAmount = Number((document.getElementById('ocr-amount') || {}).value) || 2;
+            const ierr = ticketIssueError(t, issue);
+            if (ierr) { ocrMsg('❌ ' + ierr + '（期号取自上方手动录入表单）', '#c0392b'); return; }
+            const list = loadTickets();
+            const seen = list.map(x => ticketKey(x.type, x.issue, x.zones));
+            let saved = 0, skipped = 0, invalid = 0;
+            const bad = [];
+            rows.forEach(row => {
+                const k = Number(row.dataset.bet) + 1;
+                const raws = Array.prototype.slice.call(row.querySelectorAll('input[data-zi]')).map(i => i.value || '');
+                const parsed = parseTicketZones(t, raws);
+                if (parsed.err) { invalid++; bad.push('#' + k + ' ' + parsed.err); row.style.background = '#fdf0ef'; return; }
+                const key = ticketKey(t, issue, parsed.zones);
+                if (seen.indexOf(key) >= 0) { skipped++; row.style.background = '#fff8e6'; return; }
+                seen.push(key);
+                list.unshift(ticketRecord(t, issue, parsed.zones, perAmount));
+                saved++;
+                row.style.background = '#f0f9f4';
+            });
+            if (saved) saveTickets(list);
+            renderTicketList();
+            let msg = saved
+                ? ('✅ 已保存 <b>' + saved + '</b> 注（共 ¥' + fmtMoney(saved * perAmount) + '），并按最新开奖数据自动判定。')
+                : '未保存任何注数。';
+            if (skipped) msg += ' 重复/已录入 ' + skipped + ' 注已跳过。';
+            if (invalid) msg += ' ' + invalid + ' 注号码不合法：' + bad.join('；');
+            ocrMsg(msg, saved ? '#27ae60' : '#c0392b');
+            tkMsg('✅ 已从识别结果保存 ' + saved + ' 注，合计投入 ¥' + fmtMoney(saved * perAmount) + '。', '#27ae60');
+        }
+
         function runOcrPaste() {
             const ta = document.getElementById('ocr-paste');
             const txt = ta ? String(ta.value || '').trim() : '';
@@ -9377,18 +9502,15 @@
                     if (take.length) { inputs[i].value = take.join(' '); filled.push(zs[i].label + ' ' + take.join(' ')); }
                 }
             }
+            // 全部识别到的注都列进可编辑列表，避免「识别 5 注却只能存 1 注」
+            renderOcrBets(t, hits, el ? String(el.value || '') : '');
             const corrected = Array.from(document.querySelectorAll('#tk-nums input[data-zi]')).map(i => i.value || '');
             saveOcrCorrection(t, text, corrected);
             if (out) {
                 let html = '<b>识别到的文字</b><br>' + ocrCircleHtml(text, hits);
                 if (hits.length) {
-                    html += '<br><b style="color:#27ae60;">🎯 识别到 ' + hits.length + ' 注'
-                        + (filled.length ? '，已把第 1 注回填到录入表单：<span style="color:#2c3e50;">' + filled.join('　') + '</span>' : '') + '</b>';
-                    if (hits.length > 1) {
-                        html += '<br><span style="color:#7f8c8d;">其余各注（改表单后逐注保存）：</span>'
-                            + hits.slice(1).map((h, k) => '<br><span class="ocr-hit-zone">#' + (k + 2) + '　'
-                                + h.zones.map(z => z.label + ' ' + z.nums.map(pad2n).join(' ')).join(' + ') + '</span>').join('');
-                    }
+                    html += '<br><b style="color:#27ae60;">🎯 识别到 ' + hits.length + ' 注，全部列在下方，核对后点「保存勾选的 ' + hits.length + ' 注」即可一次录入。</b>'
+                        + (hits.length > 1 ? '<br><span style="color:#7f8c9a;">第 1 注也已回填到「✍️ 手动录入」表单，单独保存仍可用。</span>' : '');
                 } else {
                     html += '<br><b style="color:#c0392b;">没有找到结构符合的号码行</b>（已按整段顺序粗略回填，请人工核对）';
                 }
