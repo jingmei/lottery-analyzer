@@ -1558,6 +1558,11 @@
                     <h3>🎯 下期号码预测（AI 回测校准）</h3>
                     <p style="opacity: 0.9; margin-bottom: 6px;" id="predict-target">基于近30期 + 全量历史双窗口建模，逐期回测后自适应调权</p>
                     <p class="predict-tip" style="opacity: 0.8;">下列方案按「期望命中个数」降序排列，<b>第一组（金色高亮）为概率最高的首选方案</b>；备选组点击按钮可按概率权重重新采样</p>
+                    <div class="yj-toggle" style="margin:10px 0;font-size:0.85em;">
+                        <label style="cursor:pointer;user-select:none;">
+                            <input type="checkbox" id="yijing-toggle" checked onchange="toggleYijing(this)"> 📜 易经玄学维度（按日期起卦，娱乐参考）
+                        </label>
+                    </div>
                     <div class="predict-groups" id="predict-groups"></div>
                     <div class="confidence-score">
                         <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
@@ -1576,6 +1581,12 @@
                     </p>
                     <button class="btn-generate" onclick="regenerateRecommendation()">🎲 重新生成备选方案</button>
                 </div>
+            </div>
+
+            <!-- 易经玄机 · 今日卦象推演（娱乐参考） -->
+            <div class="card full-width" id="yijing-card">
+                <div class="card-title"><span class="icon">📜</span> 易经玄机 · 今日卦象推演（娱乐参考）</div>
+                <div id="yijing-body" style="font-size:0.9em;line-height:1.7;"></div>
             </div>
 
             <!-- 组合形态校准 -->
@@ -4877,12 +4888,129 @@
 
         // 生成下一期预测：硬性 Top 组合（首选）+ 概率加权采样的备选组合
         // seed 用于把备选组的采样变成确定性的，使「历史补算」结果可复现（刷新页面不变）
+        // ==================== 易经玄学维度（2026-11-11 接入 · 仅供娱乐参考）====================
+        // 梅花易数起卦 → 八卦/纳甲/卦序/动爻/卦辞数词 映射到 1–35（前区）/1–12（后区）→ 命中计数
+        // × 当月五行旺衰因子 → softmax 合成权重。最终由 YIJING_FUSE_W 缩放后叠加进统计融合分数。
+        const YJ_BAGUA = {
+            1: { n: '乾', xt: 1, ht: 6, na: [1, 3, 5, 7, 9, 11] },
+            2: { n: '兑', xt: 2, ht: 7, na: [6, 4, 2, 12, 10, 8] },
+            3: { n: '离', xt: 3, ht: 9, na: [4, 2, 12, 10, 8, 6] },
+            4: { n: '震', xt: 4, ht: 3, na: [1, 3, 5, 7, 9, 11] },
+            5: { n: '巽', xt: 5, ht: 4, na: [2, 12, 10, 8, 6, 4] },
+            6: { n: '坎', xt: 6, ht: 1, na: [3, 5, 7, 9, 11, 1] },
+            7: { n: '艮', xt: 7, ht: 8, na: [5, 7, 9, 11, 1, 3] },
+            8: { n: '坤', xt: 8, ht: 2, na: [8, 6, 4, 2, 12, 10] }
+        };
+        const YJ_NAME = { 1: '乾', 2: '兑', 3: '离', 4: '震', 5: '巽', 6: '坎', 7: '艮', 8: '坤' };
+        // 上卦(行) × 下卦(列) → 卦名
+        const YJ_UP_DOWN_NAME = {
+            1: { 1: '乾', 2: '履', 3: '同人', 4: '无妄', 5: '姤', 6: '讼', 7: '遁', 8: '否' },
+            2: { 1: '夬', 2: '兑', 3: '革', 4: '随', 5: '大过', 6: '困', 7: '咸', 8: '萃' },
+            3: { 1: '大有', 2: '睽', 3: '离', 4: '噬嗑', 5: '鼎', 6: '未济', 7: '旅', 8: '晋' },
+            4: { 1: '大壮', 2: '归妹', 3: '丰', 4: '震', 5: '恒', 6: '解', 7: '小过', 8: '豫' },
+            5: { 1: '小畜', 2: '中孚', 3: '家人', 4: '益', 5: '巽', 6: '涣', 7: '渐', 8: '观' },
+            6: { 1: '需', 2: '节', 3: '既济', 4: '屯', 5: '井', 6: '坎', 7: '蹇', 8: '比' },
+            7: { 1: '大畜', 2: '损', 3: '贲', 4: '颐', 5: '蛊', 6: '蒙', 7: '艮', 8: '剥' },
+            8: { 1: '泰', 2: '临', 3: '明夷', 4: '复', 5: '升', 6: '师', 7: '谦', 8: '坤' }
+        };
+        const YJ_SEQ = { '乾': 1, '坤': 2, '屯': 3, '蒙': 4, '需': 5, '讼': 6, '师': 7, '比': 8, '小畜': 9, '履': 10, '泰': 11, '否': 12, '同人': 13, '大有': 14, '谦': 15, '豫': 16, '随': 17, '蛊': 18, '临': 19, '观': 20, '噬嗑': 21, '贲': 22, '剥': 23, '复': 24, '无妄': 25, '大畜': 26, '颐': 27, '大过': 28, '坎': 29, '离': 30, '咸': 31, '恒': 32, '遁': 33, '大壮': 34, '晋': 35, '明夷': 36, '家人': 37, '睽': 38, '蹇': 39, '解': 40, '损': 41, '益': 42, '夬': 43, '姤': 44, '萃': 45, '升': 46, '困': 47, '井': 48, '革': 49, '鼎': 50, '震': 51, '艮': 52, '渐': 53, '归妹': 54, '丰': 55, '旅': 56, '巽': 57, '兑': 58, '涣': 59, '节': 60, '中孚': 61, '小过': 62, '既济': 63, '未济': 64 };
+        const YJ_GUA_CI = { '乾': '元亨，利贞。', '坤': '元亨，利牝马之贞。', '屯': '元亨，利贞，勿用有攸往，利建侯。', '蒙': '亨。匪我求童蒙，童蒙求我。', '需': '有孚，光亨，贞吉。利涉大川。', '讼': '有孚，窒。惕中吉。终凶。', '师': '贞，丈人，吉无咎。', '比': '吉。原筮，元永贞，无咎。', '小畜': '亨。密云不雨，自我西郊。', '履': '履虎尾，不咥人，亨。', '泰': '小往大来，吉亨。', '否': '否之匪人，不利君子贞，大往小来。', '同人': '同人于野，亨。', '大有': '元亨。', '谦': '亨，君子有终。', '豫': '利建侯行师。', '随': '元亨利贞，无咎。', '蛊': '元亨，利涉大川。', '临': '元，亨，利，贞。至于八月有凶。', '观': '盥而不荐，有孚颙若。', '噬嗑': '亨。利用狱。', '贲': '亨。小利有攸往。', '剥': '不利有攸往。', '复': '亨。出入无疾，朋来无咎。', '无妄': '元，亨，利，贞。其匪正有眚。', '大畜': '利贞，不家食吉。', '颐': '贞吉。观颐，自求口实。', '大过': '栋桡，利有攸往，亨。', '坎': '习坎，有孚，维心亨，行有尚。', '离': '利贞，亨。畜牝牛，吉。', '咸': '亨，利贞，取女吉。', '恒': '亨，无咎，利贞，利有攸往。', '遁': '亨，小利贞。', '大壮': '利贞。', '晋': '康侯用锡马蕃庶，昼日三接。', '明夷': '利艰贞。', '家人': '利女贞。', '睽': '小事吉。', '蹇': '利西南，不利东北。', '解': '利西南。', '损': '有孚，元吉，无咎。', '益': '利有攸往，利涉大川。', '夬': '扬于王庭，孚号有厉。', '姤': '女壮，勿用取女。', '萃': '亨。王假有庙。', '升': '元亨，用见大人，勿恤，南征吉。', '困': '亨，贞，大人吉，无咎。', '井': '改邑不改井，无丧无得。', '革': '巳日乃孚，元亨利贞。', '鼎': '元吉，亨。', '震': '亨。震来虩虩，笑言哑哑。', '艮': '艮其背，不获其身。', '渐': '女归吉，利贞。', '归妹': '征凶，无攸利。', '丰': '亨，王假之，勿忧。', '旅': '小亨，旅贞吉。', '巽': '小亨，利有攸往，利见大人。', '兑': '亨，利贞。', '涣': '亨。王假有庙。', '节': '亨。苦节不可贞。', '中孚': '豚鱼吉，利涉大川。', '小过': '亨，利贞。', '既济': '亨，小利贞，初吉终乱。', '未济': '亨，小狐汔济，濡其尾。' };
+        // 卦辞/爻辞中显式数词（直接取数，作"直中"高权）
+        const YJ_CI_NUM = { '复': [7], '临': [8], '损': [10], '屯': [10, 3], '既济': [3], '泰': [11], '升': [11, 9], '小畜': [5], '归妹': [10] };
+
+        function yjTodayStr() {
+            const d = new Date();
+            const p = n => (n < 10 ? '0' : '') + n;
+            return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+        }
+        // 梅花易数「年月日时」报数法：年取地支序数（公元年 (year-4)%12+1），月/日/时按数字
+        function yjCast(dateStr) {
+            const d = dateStr ? new Date(dateStr + 'T20:00:00') : new Date();
+            const yBranch = (((d.getFullYear() - 4) % 12) + 12) % 12 + 1;   // 2026→午7
+            const m = d.getMonth() + 1, day = d.getDate(), h = 11;          // 戌时起卦（固定，保证可复现）
+            const up = ((yBranch + m + day) % 8) || 8;
+            const down = ((yBranch + m + day + h) % 8) || 8;
+            const mov = ((yBranch + m + day + h) % 6) || 6;
+            const flip = g => ({ 1: 8, 2: 7, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1 })[g];
+            const bUp = mov >= 4 ? flip(up) : up;       // 动爻在四~六爻 → 变上卦
+            const bDown = mov <= 3 ? flip(down) : down; // 动爻在一~三爻 → 变下卦
+            return { up, down, bUp, bDown, mov, ben: YJ_UP_DOWN_NAME[up][down], bian: YJ_UP_DOWN_NAME[bUp][bDown] };
+        }
+        // 把候选数 v 扩展到区段：前区 1–35（v / v+12 / v+24），后区 1–12（仅 v）
+        function yjHitTable(cast) {
+            const front = {}, back = {}, sources = { front: {}, back: {} };
+            const addF = (v, tag) => { for (let k = 0; k <= 2; k++) { const x = v + k * 12; if (x >= 1 && x <= 35) { front[x] = (front[x] || 0) + 1; (sources.front[x] = sources.front[x] || []).push(tag); } } };
+            const addB = (v, tag) => { if (v >= 1 && v <= 12) { back[v] = (back[v] || 0) + 1; (sources.back[v] = sources.back[v] || []).push(tag); } };
+            [[cast.up, cast.down, cast.ben], [cast.bUp, cast.bDown, cast.bian]].forEach(([u, d, name]) => {
+                [YJ_BAGUA[u], YJ_BAGUA[d]].forEach(g => { addF(g.xt, '先天' + g.n); addB(g.xt, '先天' + g.n); addF(g.ht, '后天' + g.n); addB(g.ht, '后天' + g.n); });
+            });
+            const bs = YJ_SEQ[cast.ben] || 0, ys = YJ_SEQ[cast.bian] || 0;
+            addF(bs % 35 || 35, '卦序' + cast.ben); addB(bs % 12 || 12, '卦序' + cast.ben);
+            addF(ys % 35 || 35, '卦序' + cast.bian); addB(ys % 12 || 12, '卦序' + cast.bian);
+            addF(cast.mov, '动爻' + cast.mov); addB(cast.mov, '动爻' + cast.mov);
+            [].concat(YJ_BAGUA[cast.down].na, YJ_BAGUA[cast.up].na).forEach(z => { addF(z, '纳甲' + z); addB(z, '纳甲' + z); });
+            (YJ_CI_NUM[cast.ben] || []).forEach(v => { addF(v, '辞' + v); if (v <= 12) addB(v, '辞' + v); });
+            (YJ_CI_NUM[cast.bian] || []).forEach(v => { addF(v, '辞' + v); if (v <= 12) addB(v, '辞' + v); });
+            return { front, back, sources };
+        }
+        // 当月五行旺衰 → 每个号码(1..80)的五行因子（当令1.0 / 我生0.85 / 生我0.70 / 我克0.55 / 克我0.40）
+        function yjW5Map(dateStr) {
+            const d = dateStr ? new Date(dateStr + 'T20:00:00') : new Date();
+            const m = d.getMonth() + 1, day = d.getDate();
+            let branch;
+            if (m === 11 && day >= 7) branch = '亥';
+            else if (m === 11) branch = '戌';
+            else if (m === 12 && day < 7) branch = '亥';
+            else branch = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'][m - 1];
+            const eleOf = { 子: '水', 亥: '水', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 丑: '土' };
+            const ruling = eleOf[branch] || '水';
+            const rel = {
+                '水': { 水: 1.0, 木: 0.85, 金: 0.70, 土: 0.55, 火: 0.40 }, '木': { 木: 1.0, 火: 0.85, 水: 0.70, 土: 0.55, 金: 0.40 },
+                '火': { 火: 1.0, 土: 0.85, 木: 0.70, 金: 0.55, 水: 0.40 }, '金': { 金: 1.0, 水: 0.85, 土: 0.70, 火: 0.55, 木: 0.40 },
+                '土': { 土: 1.0, 金: 0.85, 火: 0.70, 水: 0.55, 木: 0.40 }
+            }[ruling];
+            const numEl = n => ['水', '火', '木', '金', '土'][(n - 1) % 5]; // 河图生成数：1水2火3木4金5土
+            const map = {};
+            for (let n = 1; n <= 80; n++) map[n] = rel[numEl(n)];
+            return map;
+        }
+        // 给定 zone 与日期，返回 {n: weight}（softmax 归一），及 cast/tbl 供展示
+        function yjZoneWeights(zone, dateStr) {
+            const cast = yjCast(dateStr);
+            const tbl = yjHitTable(cast);
+            const isBack = zone.max <= 12;
+            const base = isBack ? tbl.back : tbl.front;
+            const w5 = yjW5Map(dateStr);
+            const raw = {};
+            for (let n = zone.min; n <= zone.max; n++) raw[n] = (base[n] || 0) * (w5[n] || 0.5);
+            const tau = 2; const e = {}; let s = 0;
+            for (const k in raw) { e[k] = Math.exp(raw[k] / tau); s += e[k]; }
+            const w = {}; for (const k in e) w[k] = e[k] / s;
+            return { w, cast, tbl, isBack };
+        }
+        // 把易经权重叠加进统计融合分数（在归一化之前调用）
+        function injectYijing(scores, zone, dateStr) {
+            if (!YIJING_ENABLED || zone.min < 1) return;
+            const { w } = yjZoneWeights(zone, dateStr);
+            let maxS = -Infinity, minS = Infinity;
+            for (let n = zone.min; n <= zone.max; n++) { const v = scores[n] || 0; if (v > maxS) maxS = v; if (v < minS) minS = v; }
+            const span = Math.max(maxS - minS, 1e-9);
+            let maxW = 0; for (const k in w) maxW = Math.max(maxW, w[k]);
+            const yScale = maxW > 0 ? (span * YIJING_FUSE_W) / maxW : 0;
+            for (let n = zone.min; n <= zone.max; n++) scores[n] = (scores[n] || 0) + (w[n] || 0) * yScale;
+        }
+
         function predictZone(history, zone, bt, groupN, seed) {
             const _rnd = (seed === undefined || seed === null) ? Math.random : mulberry32(hashStr(String(seed)) + 0x9e3779b9);
             const series = bt.series || buildSeries(history, zone);
             const occMap = bt.occMap || buildOccMap(series, zone);
             const feat = computeFeatures(series, occMap, zone, 0);
             const scores = scoreNumbers(feat, zone, bt.fuseW);
+
+            // ── 易经玄学维度：按日期起卦，把易经权重叠加进融合分数（可开关，娱乐参考）──
+            if (typeof YIJING_ENABLED !== 'undefined' && YIJING_ENABLED) {
+                injectYijing(scores, zone, (bt && bt.date) ? bt.date : yjTodayStr());
+            }
 
             let minS = Infinity, maxS = -Infinity;
             for (let n = zone.min; n <= zone.max; n++) {
@@ -5007,6 +5135,11 @@
         //            spread 控制 5 组之间的号码分散度。
         // =====================================================================
         const RL_ON = true;
+
+        // ===== 易经玄学维度（周变易 / 大乐透玄机专家团）=====
+        // 仅供文化娱乐参考，与统计模型正交：以固定权重叠加到融合分数上，不进入回测融合权重(fuseW)。
+        let YIJING_ENABLED = true;        // 总开关（UI 复选框控制）
+        const YIJING_FUSE_W = 0.20;      // 易经权重在融合分数中的占比上限
         const RL_CFG = {
             ssq: { w: [0.470, 0.250, 0.634, -0.150, 0.511, 0.538, 0.409, 0.378, 0.095, 0.289, 0.473], tau: 0.319, spread: 0.577, seed: 307 },
             dlt: { w: [0.398, 0.365, 0.225, -0.062, 0.519, 0.833, 0.114, 0.675, 0.517, 0.347, 0.302], tau: 0.393, spread: 0.675, seed: 76 },
@@ -8684,11 +8817,42 @@
             try { clearPoolCache(); } catch (e) { }
         }
 
+        // ===== 易经玄机展示卡（仅供娱乐参考）=====
+        function toggleYijing(el) {
+            YIJING_ENABLED = !!el.checked;
+            if (typeof generateRecommendation === 'function') generateRecommendation();
+        }
+        function renderYijingCard(type) {
+            const el = document.getElementById('yijing-body');
+            if (!el) return;
+            if (!YIJING_ENABLED) { el.innerHTML = '<p style="opacity:.6">易经玄学维度已关闭。勾选上方「📜 易经玄学维度」可重新开启。</p>'; return; }
+            const dateStr = yjTodayStr();
+            const cast = yjCast(dateStr);
+            const zones = getZones(type);
+            let html = '';
+            html += '<div style="margin-bottom:6px;"><b>本卦</b> ' + cast.ben + '（' + YJ_BAGUA[cast.up].n + '上' + YJ_BAGUA[cast.down].n + '下）→ <b>变卦</b> ' + cast.bian + '　·　动爻 第' + cast.mov + '爻　·　' + dateStr + '</div>';
+            if (YJ_GUA_CI[cast.ben]) html += '<div style="opacity:.85;">《' + cast.ben + '》卦辞：' + YJ_GUA_CI[cast.ben] + '</div>';
+            if (YJ_GUA_CI[cast.bian]) html += '<div style="opacity:.85;">《' + cast.bian + '》卦辞：' + YJ_GUA_CI[cast.bian] + '</div>';
+            zones.forEach(z => {
+                if (z.min < 1) return; // 3D 等数位型不适用
+                const r = yjZoneWeights(z, dateStr);
+                const top = Object.keys(r.w).map(Number).sort((a, b) => r.w[b] - r.w[a]).slice(0, z.count).sort((a, b) => a - b);
+                const tblKey = z.max <= 12 ? 'back' : 'front';
+                const srcs = top.map(n => n + '（' + (r.tbl.sources[tblKey][n] || []).join('·') + '）').join('，');
+                html += '<div style="margin-top:6px;"><b>' + z.label + '</b> 参考号码：' + top.join('　') + '<br><small style="opacity:.7;">' + srcs + '</small></div>';
+            });
+            const fz = YJ_SEQ[cast.bian] % 35 || 35;
+            html += '<div style="margin-top:6px;">📌 置信号：前区 <b>' + fz + '</b>（' + cast.bian + '卦序呼应）｜ 后区 <b>' + cast.mov + '</b>（动爻第' + cast.mov + '爻）</div>';
+            html += '<div style="margin-top:8px;color:#c0392b;font-size:0.85em;">⚠️ 由《易经》卦象推演生成，仅供玄学娱乐参考，<b>不构成任何购彩建议</b>。彩票开奖完全随机，请理性购彩、量力而行。</div>';
+            el.innerHTML = html;
+        }
+
         function generateRecommendation() {
             if (!currentHistory.length) return;
             const pred = runPrediction(currentType, currentHistory);
             PREDICT_CACHE[currentType] = pred;
             renderPredictGroups(pred, currentType);
+            renderYijingCard(currentType);
             updateConfidence(pred, currentType);
             renderBacktest(pred, currentType);
             renderShapePanel(pred, currentType);
