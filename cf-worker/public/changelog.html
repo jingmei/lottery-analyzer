@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>版本更新说明 · 更新日志</title>
+<meta name="description" content="彩票历史数据统计分析工具的版本更新日志：功能上线记录、问题修复与体验改进。">
+<style>
+  :root { color-scheme: light; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px 16px 64px;
+    background: #f5f7fa; color: #24303f;
+    font: 16px/1.85 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  main { max-width: 820px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #2c3e6b, #43558f);
+    color: #fff; border-radius: 14px; padding: 28px 26px; margin-bottom: 22px;
+  }
+  header h1 { margin: 0 0 6px; font-size: 1.5em; }
+  header p { margin: 0; opacity: .88; font-size: .92em; }
+  nav a {
+    display: inline-block; margin: 14px 10px 0 0; padding: 5px 14px;
+    background: rgba(255,255,255,.16); color: #fff; border-radius: 20px;
+    text-decoration: none; font-size: .88em;
+  }
+  nav a:hover { background: rgba(255,255,255,.3); }
+  section {
+    background: #fff; border: 1px solid #e3e8ef; border-radius: 12px;
+    padding: 22px 26px; margin-bottom: 18px;
+  }
+  h2 { margin: 0 0 14px; font-size: 1.15em; color: #2c3e6b; border-left: 4px solid #43558f; padding-left: 10px; }
+  h3 { margin: 0 0 8px; font-size: 1em; color: #34495e; }
+  p, li { margin: 6px 0; }
+  ul { padding-left: 22px; }
+  strong { color: #1d2b45; }
+  a { color: #2f5bb7; }
+  code { background: #eef1f6; padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  footer { text-align: center; color: #7a8698; font-size: .86em; margin-top: 26px; }
+
+  /* 版本条目 */
+  .rel { display: flex; gap: 18px; padding: 20px 0; border-bottom: 1px dashed #e3e8ef; }
+  .rel:last-child { border-bottom: none; padding-bottom: 2px; }
+  .rel-meta { flex: 0 0 116px; text-align: right; }
+  .rel-ver {
+    display: inline-block; background: #43558f; color: #fff; font-weight: 700;
+    font-size: .82em; padding: 2px 10px; border-radius: 10px; white-space: nowrap;
+  }
+  .rel-ver.latest { background: #27ae60; }
+  .rel-date { display: block; font-size: .78em; color: #8b97a8; margin-top: 8px; }
+  .rel-body { flex: 1; min-width: 0; }
+  .rel-title { font-weight: 700; color: #1d2b45; margin-bottom: 4px; }
+  .rel-body ul { margin: 4px 0 0; }
+  .rel-body li { font-size: .94em; }
+  .rel + .rel { margin-top: 0; }
+  .badge-now {
+    display: inline-block; background: #e8f7ee; color: #1e8449; border: 1px solid #bfe6cf;
+    border-radius: 20px; padding: 3px 12px; font-size: .82em; font-weight: 700; margin-left: 8px;
+    vertical-align: middle;
+  }
+  .note {
+    background: #fff8e6; border: 1px solid #f0d9a0; border-radius: 10px;
+    padding: 14px 18px; color: #6b5218; font-size: .92em;
+  }
+  @media (max-width: 620px) {
+    .rel { flex-direction: column; gap: 6px; }
+    .rel-meta { flex: none; text-align: left; }
+    .rel-date { display: inline; margin-left: 8px; }
+    section { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<main>
+
+<header>
+  <h1>版本更新说明</h1>
+  <p>功能上线、问题修复与体验改进记录 · 当前版本 v1.6.0（2026-11-11）</p>
+  <nav>
+    <a href="#latest">最新版本</a>
+    <a href="#history">历史版本</a>
+    <a href="/">返回首页</a>
+    <a href="/about.html">关于本站</a>
+  </nav>
+</header>
+
+<section id="latest">
+  <h2>最新版本 <span class="badge-now">v1.6.0 · 2026-11-11</span></h2>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver latest">v1.6.0</span><span class="rel-date">2026-11-11</span></div>
+    <div class="rel-body">
+      <div class="rel-title">新增「🌿 推荐 4 · 梅花易数」</div>
+      <ul>
+        <li>预测区固定输出 <strong>4 组推荐</strong>：首选 + 备选 1 + 备选 2 + <strong>梅花易数</strong>。</li>
+        <li>梅花易数按你<strong>打开页面的本机时间</strong>起卦（年月日时），推演出本卦、变卦、动爻，再换算成一组 5+2 参考号码。</li>
+        <li>每颗球都标注来源（先天/后天八卦数、纳甲地支、卦序、动爻、卦辞数词），并附卦辞与置信号，可逐条追溯。</li>
+        <li>该组不参与统计融合与回测，属独立的文化娱乐维度，可在预测区一键开关。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver latest">v1.6.0</span><span class="rel-date">2026-11-11</span></div>
+    <div class="rel-body">
+      <div class="rel-title">首页日期改为实时滚动</div>
+      <ul>
+        <li>每次打开页面，顶部「数据更新于」直接就是<strong>最新一期</strong>，不再停留在某一天。</li>
+        <li>修复浏览器旧缓存把首屏拉回历史日期的问题：缓存比页面内嵌数据更旧时会被丢弃。</li>
+        <li>数据抓取进程改为常驻自愈：接口无响应会自动重启，不再出现「进程在、数据不更新」。</li>
+        <li>新增本页「版本更新说明」，方便查看近期改动。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="history">
+  <h2>历史版本</h2>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver">v1.5.0</span><span class="rel-date">2026-11-10</span></div>
+    <div class="rel-body">
+      <div class="rel-title">拍照识票支持多注</div>
+      <ul>
+        <li>识别一张票上的<strong>多注号码</strong>后，会列出全部注数，可逐注核对、修改号码。</li>
+        <li>支持「一键保存全部注数并判定」，修复此前 5 注只能存下 1 注的问题。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver">v1.4.0</span><span class="rel-date">2026-11-09</span></div>
+    <div class="rel-body">
+      <div class="rel-title">首屏即为最新数据</div>
+      <ul>
+        <li>首页直接注入服务端最新开奖数据，打开页面不用再等二次请求。</li>
+        <li>缩短页面缓存时间，减少微信内置浏览器长时间停留在旧快照。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver">v1.3.0</span><span class="rel-date">2026-11-08</span></div>
+    <div class="rel-body">
+      <div class="rel-title">数据更新更稳定</div>
+      <ul>
+        <li>新增常开设备抓取脚本，支持开机自启，数据更新不再依赖手动操作。</li>
+        <li>服务异常自动重启，抓取失败会记录日志便于排查。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver">v1.2.0</span><span class="rel-date">2026-11-05</span></div>
+    <div class="rel-body">
+      <div class="rel-title">弱网体验修复</div>
+      <ul>
+        <li>数据接口开启压缩、放宽超时，缓解弱网下长时间「连接中」。</li>
+        <li>刷新页面直接显示上次已同步的数据，不再空白等待。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver">v1.0.0</span><span class="rel-date">2026-11</span></div>
+    <div class="rel-body">
+      <div class="rel-title">首个公开版本</div>
+      <ul>
+        <li>覆盖双色球、大乐透、快乐8、福彩3D、七乐彩、排列3 六个彩种的历史开奖数据。</li>
+        <li>冷热号、遗漏值、出号概率、组合形态校准、多策略回测与置信度。</li>
+        <li>中奖录入与开奖提醒、拍照识票（本地浏览器内完成，不上传图片）。</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>版本说明</h2>
+  <p>版本号按<strong>功能上线日期</strong>编排（<code>v主版本.次版本.修订号</code>），同一版本内的多次修复会合并记录；小修小补不单独发版本。</p>
+  <div class="note">
+    <p><strong>号码均为统计或文化娱乐推演结果，不构成投注建议，也不承诺中奖。</strong>彩票开奖为独立随机事件，不存在可预测规律。请理性购彩、量力而行；未满 18 周岁请勿购彩。</p>
+  </div>
+</section>
+
+<footer>
+  个人开源非商业项目 · 不销售彩票 · 不收集个人信息 · 不构成投注建议 · 请理性购彩
+</footer>
+
+</main>
+</body>
+</html>
