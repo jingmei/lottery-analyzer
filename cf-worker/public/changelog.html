@@ -76,7 +76,7 @@
 
 <header>
   <h1>版本更新说明</h1>
-  <p>功能上线、问题修复与体验改进记录 · 当前版本 v1.6.0（2026-11-11）</p>
+  <p>功能上线、问题修复与体验改进记录 · 当前版本 v1.7.0（2026-11-11）</p>
   <nav>
     <a href="#latest">最新版本</a>
     <a href="#history">历史版本</a>
@@ -86,10 +86,24 @@
 </header>
 
 <section id="latest">
-  <h2>最新版本 <span class="badge-now">v1.6.0 · 2026-11-11</span></h2>
+  <h2>最新版本 <span class="badge-now">v1.7.0 · 2026-11-11</span></h2>
 
   <div class="rel">
-    <div class="rel-meta"><span class="rel-ver latest">v1.6.0</span><span class="rel-date">2026-11-11</span></div>
+    <div class="rel-meta"><span class="rel-ver latest">v1.7.0</span><span class="rel-date">2026-11-11</span></div>
+    <div class="rel-body">
+      <div class="rel-title">首屏只等「本期开奖 + 推荐号码」，其余延后加载</div>
+      <ul>
+        <li>打开页面<strong>先出本期开奖号码</strong>，紧接着出推荐号码；冷热、遗漏、概率、走势图、100 期历史表、回测、预测存档等<strong>次要内容全部延后</strong>，在空闲时再补上。</li>
+        <li><strong>专业版改为按需渲染</strong>：只有真正切到「专业版」时才计算并绘制图表，不再每次打开都跑一遍。</li>
+        <li>图表库 Chart.js 不再随页面阻塞加载，改为<strong>需要画图时才按需拉取</strong>；网络慢时也不会拖住首页。</li>
+        <li>延后的区块会显示「正在加载…」占位，不再出现空白或先闪一下过期数据。</li>
+        <li>实测（本地无头浏览器）页面可交互时间从约 <strong>0.9–1.1 秒降到约 0.3 秒</strong>。</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="rel">
+    <div class="rel-meta"><span class="rel-ver">v1.6.0</span><span class="rel-date">2026-11-11</span></div>
     <div class="rel-body">
       <div class="rel-title">新增「🌿 推荐 4 · 梅花易数」</div>
       <ul>
@@ -102,7 +116,7 @@
   </div>
 
   <div class="rel">
-    <div class="rel-meta"><span class="rel-ver latest">v1.6.0</span><span class="rel-date">2026-11-11</span></div>
+    <div class="rel-meta"><span class="rel-ver">v1.6.0</span><span class="rel-date">2026-11-11</span></div>
     <div class="rel-body">
       <div class="rel-title">首页日期改为实时滚动</div>
       <ul>

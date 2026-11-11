@@ -1283,6 +1283,43 @@
             display: block;
         }
 
+        /* ===== 渐进式加载：骨架占位与「加载中」提示 ===== */
+        .skl {
+            color: transparent !important;
+            background: linear-gradient(90deg, #eef1f5 25%, #e2e8ef 37%, #eef1f5 63%);
+            background-size: 400% 100%;
+            animation: sklShimmer 1.4s ease-in-out infinite;
+            border-radius: 6px;
+            min-width: 46px;
+            display: inline-block;
+        }
+        @keyframes sklShimmer {
+            0% { background-position: 100% 50%; }
+            100% { background-position: 0 50%; }
+        }
+        .lazy-hint {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 14px 4px;
+            color: #9aa7b4;
+            font-size: 0.86em;
+        }
+        .lazy-hint::before {
+            content: '';
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid #d5dde6;
+            border-top-color: #8fb8dd;
+            animation: lazySpin 0.8s linear infinite;
+        }
+        @keyframes lazySpin { to { transform: rotate(360deg); } }
+        @media (prefers-reduced-motion: reduce) {
+            .skl { animation: none; }
+            .lazy-hint::before { animation: none; }
+        }
+
     </style>
 </head>
 <body>
@@ -1385,27 +1422,27 @@
             <div class="card latest-draw">
                 <div class="card-title"><span class="icon">📢</span> 最新开奖</div>
                 <div class="draw-info">
-                    <span id="draw-period">第 2025136 期</span>
-                    <span id="draw-date">2025-11-25</span>
+                    <span id="draw-period">第 — 期</span>
+                    <span id="draw-date"></span>
                 </div>
                 <div class="balls-container" id="latest-balls">
                     <!-- Balls will be inserted here -->
                 </div>
                 <div class="stats-row">
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-sales">3.61亿</div>
+                        <div class="stat-value skl" id="stat-sales">—</div>
                         <div class="stat-label">当期销量</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-pool">25.83亿</div>
+                        <div class="stat-value skl" id="stat-pool">—</div>
                         <div class="stat-label">奖池累计</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-first">43注</div>
+                        <div class="stat-value skl" id="stat-first">—</div>
                         <div class="stat-label">一等奖</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-value" id="stat-prize">546万</div>
+                        <div class="stat-value skl" id="stat-prize">—</div>
                         <div class="stat-label">单注奖金</div>
                     </div>
                 </div>
@@ -1889,7 +1926,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <!-- Chart.js 不再阻塞首屏：改为真正需要画图时才动态加载（见 ensureChart） -->
     <script>
         // ==================== 彩票数据配置 ====================
         const LOTTERY_CONFIG = {
@@ -3928,10 +3965,17 @@
 
             document.getElementById('draw-period').textContent = `第 ${latest.period} 期`;
             document.getElementById('draw-date').textContent = latest.date;
-            document.getElementById('stat-sales').textContent = latest.sales;
-            document.getElementById('stat-pool').textContent = latest.pool;
-            document.getElementById('stat-first').textContent = `${latest.firstPrize}注`;
-            document.getElementById('stat-prize').textContent = latest.prizeAmount;
+            // 填充后去掉骨架样式，否则文字仍是透明的
+            const setStat = (id, v) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                el.textContent = (v === undefined || v === null || v === '') ? '—' : v;
+                el.classList.remove('skl');
+            };
+            setStat('stat-sales', latest.sales);
+            setStat('stat-pool', latest.pool);
+            setStat('stat-first', `${latest.firstPrize}注`);
+            setStat('stat-prize', latest.prizeAmount);
 
             if (type === 'ssq') {
                 latest.numbers.red.forEach(num => {
@@ -4192,6 +4236,7 @@
         }
 
         function renderTrendChart(history, type) {
+            if (!window.Chart) { _chartPending = true; lazyHint('trendChart'); return; }
             const ctx = document.getElementById('trendChart').getContext('2d');
             const recentHistory = history.slice(0, 30).reverse();
 
@@ -4256,6 +4301,7 @@
         }
 
         function renderBlueTrendChart(history, type) {
+            if (!window.Chart) { _chartPending = true; lazyHint('blueChart'); return; }
             const ctx = document.getElementById('blueChart').getContext('2d');
             const recentHistory = history.slice(0, 30).reverse();
 
@@ -4304,6 +4350,7 @@
 
         let FREQ_ZONE_IDX = 0;          // 频率分布图当前显示的号码区
         function renderFreqChart(zoneStat, type) {
+            if (!window.Chart) { _chartPending = true; lazyHint('freqChart'); return; }
             const ctx = document.getElementById('freqChart').getContext('2d');
 
             if (freqChartInstance) freqChartInstance.destroy();
@@ -5114,6 +5161,78 @@
         //            spread 控制 5 组之间的号码分散度。
         // =====================================================================
         const RL_ON = true;
+
+        // =====================================================================
+        // ============ 渐进式加载（Critical-first rendering） ==================
+        // 首屏只保证两件事：①本期开奖 ②推荐号码。
+        // 其余（概率/冷热/遗漏/走势图/历史表/回测/存档预热）一律延后，
+        // 在首屏绘制完成后再按空闲时间分片渲染；专业版整块渲染推迟到
+        // 用户真正切到「专业版」时才做。
+        // =====================================================================
+        const CHART_CDN = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js';
+        let _chartPromise = null;
+        let _chartPending = false;          // 有图表因 Chart.js 未就绪而跳过，加载完需补画
+
+        // 需要 Chart.js 时才按需加载，不阻塞首屏
+        function ensureChart() {
+            if (window.Chart) return Promise.resolve(window.Chart);
+            if (_chartPromise) return _chartPromise;
+            _chartPromise = new Promise(function (resolve, reject) {
+                const s = document.createElement('script');
+                s.src = CHART_CDN;
+                s.async = true;
+                s.onload = function () { resolve(window.Chart); };
+                s.onerror = function () { _chartPromise = null; reject(new Error('Chart.js 加载失败')); };
+                document.head.appendChild(s);
+            }).then(function (Chart) {
+                // 图表库就绪后，补画之前因未加载而跳过的图
+                if (_chartPending) {
+                    _chartPending = false;
+                    try { scheduleTask('charts', function () { renderAllCharts(); }); } catch (e) { }
+                }
+                return Chart;
+            });
+            return _chartPromise;
+        }
+
+        // 空闲调度：优先用 requestIdleCallback，退回 setTimeout
+        function scheduleTask(label, fn) {
+            const run = function () {
+                try { fn(); } catch (e) { console.warn('[lazy] ' + label + ' 渲染失败', e); }
+            };
+            if (typeof requestIdleCallback === 'function') {
+                requestIdleCallback(run, { timeout: 1200 });
+            } else {
+                setTimeout(run, 16);
+            }
+        }
+
+        // 首屏绘制完成后的下一拍执行（比 idle 更快，用于「关键但不轻」的内容）
+        function afterPaint(fn) {
+            const run = function () { try { fn(); } catch (e) { console.warn('[afterPaint]', e); } };
+            if (typeof requestAnimationFrame === 'function') {
+                requestAnimationFrame(function () { setTimeout(run, 0); });
+            } else {
+                setTimeout(run, 16);
+            }
+        }
+
+        // 先占位，避免区块空白
+        function lazyHint(id, text) {
+            const el = document.getElementById(id);
+            if (el && !el.dataset.ready) el.innerHTML = '<div class="lazy-hint">' + (text || '正在加载…') + '</div>';
+        }
+        // 表格用占位（tbody 里只能放 tr）
+        function lazyHintRow(id, cols, text) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.innerHTML = '<tr><td colspan="' + (cols || 6) + '"><div class="lazy-hint">'
+                + (text || '正在加载…') + '</div></td></tr>';
+        }
+
+        // 专业版 / 中奖录入 是否需要重新渲染
+        const VIEW_DIRTY = { simple: true, pro: true, notify: true };
+
 
         // ===== 梅花易数维度（周变易 / 大乐透玄机专家团）=====
         // 仅供文化娱乐参考，固定为预测区的「推荐 4」，不参与统计融合与回测。
@@ -8870,15 +8989,22 @@
             if (!currentHistory.length) return;
             const pred = runPrediction(currentType, currentHistory);
             PREDICT_CACHE[currentType] = pred;
+            // ── 关键内容：推荐号码本身，立即渲染 ──
             renderPredictGroups(pred, currentType);
-            updateConfidence(pred, currentType);
-            renderBacktest(pred, currentType);
-            renderShapePanel(pred, currentType);
-            renderBettingPlans(pred, currentType);
-            archivePrediction(currentType, pred);        // 存档本次第 1 组号码 + 时间戳
-            renderReviewBoard(pred, currentType);        // 当期开奖结果 · 预测回顾
-            renderReviewLog(currentType);                // 逐期回顾（无存档的期次后台补算）
-            setTimeout(warmBoardTypes, 400);             // 预热其余彩种并存档
+            try { updateConfidence(pred, currentType); } catch (e) { }
+            try { renderSimpRec(); } catch (e) { }
+
+            // ── 次要内容：回测、形态、投注方案、存档、回顾、预热其它彩种 ──
+            // 这些都不影响「本期开奖 + 推荐号码」，放到空闲时再算
+            scheduleTask('pred-extra', function () {
+                try { renderBacktest(pred, currentType); } catch (e) { }
+                try { renderShapePanel(pred, currentType); } catch (e) { }
+                try { renderBettingPlans(pred, currentType); } catch (e) { }
+                try { archivePrediction(currentType, pred); } catch (e) { }   // 存档第 1 组号码 + 时间戳
+                try { renderReviewBoard(pred, currentType); } catch (e) { }   // 当期开奖结果 · 预测回顾
+                try { renderReviewLog(currentType); } catch (e) { }           // 逐期回顾
+                setTimeout(function () { try { warmBoardTypes(); } catch (e) { } }, 1200); // 预热其余彩种
+            });
         }
 
         // 「重新生成」只重算备选组的加权采样，保留已完成的回测结论
@@ -8902,45 +9028,98 @@
             return array;
         }
 
-        // ==================== 主更新函数 ====================
-        function updateLottery(type) {
-            currentType = type;
-            currentHistory = getRealHistory(type);  // 使用真实数据
-
+        // ==================== 号码区统计（按彩种缓存，专业版才需要）====================
+        let ZONESTAT_CACHE = null, ZONESTAT_TYPE = null;
+        function getZoneStat() {
+            if (ZONESTAT_CACHE && ZONESTAT_TYPE === currentType) return ZONESTAT_CACHE;
             // 三窗口分析：近30期（趋势）+ 近50期（稳定）+ 近100期（规律）
-            // 逐号码区独立统计：红球与蓝球（或前区/后区、百/十/个位）各有各的频率池、冷热划分与遗漏序列
-            const zoneStat = getZones(type).map(z => ({
+            const zs = getZones(currentType).map(z => ({
                 zone: z,
                 a30: analyzeZoneHotCold(currentHistory, z, WIN_SHORT),
                 a50: analyzeZoneHotCold(currentHistory, z, WIN_MID),
                 a100: analyzeZoneHotCold(currentHistory, z, WIN_LONG),
                 miss: calcZoneMissing(currentHistory, z)
             }));
-            const a30 = zoneStat[0].a30, a50 = zoneStat[0].a50, a100 = zoneStat[0].a100;   // 主区，供频率图使用
+            ZONESTAT_CACHE = zs; ZONESTAT_TYPE = currentType;
+            return zs;
+        }
 
-            // 更新所有视图
-            renderLatestDraw(type, currentHistory);
-            renderProbability(type);
+        // 补画所有图表（Chart.js 就绪后调用）
+        function renderAllCharts() {
+            if (!currentHistory || !currentHistory.length) return;
+            const zs = getZoneStat();
+            renderTrendChart(currentHistory, currentType);
+            renderBlueTrendChart(currentHistory, currentType);
+            renderFreqChart(zs, currentType);
+        }
 
-            MISS_ZONE_IDX = 0;              // 切换彩种时回到第一个号码区
-            const zs = zoneStat;
+        // 专业版整块渲染：只在用户真正切到「专业版」时执行，且分两批（文字分析 → 图表）
+        let PRO_RENDERED = false;
+        function renderProPane() {
+            const zs = getZoneStat();
+            MISS_ZONE_IDX = 0;
+            FREQ_ZONE_IDX = 0;
             const nm1 = document.getElementById('tab-red-name');
             const nm2 = document.getElementById('tab-blue-name');
             if (nm1) nm1.textContent = zs[0].zone.label;
             if (nm2) nm2.textContent = zs.length > 1 ? zs[1].zone.label : (zs[0].zone.label + '(全部)');
-            renderHotCold(zoneStat);
-            renderCrossAnalysis(zoneStat);
-            renderMissingValues(zoneStat);
 
-            renderTrendChart(currentHistory, type);
-            renderBlueTrendChart(currentHistory, type);
-            FREQ_ZONE_IDX = 0;          // 切换彩种时回到第一个号码区
-            renderFreqChart(zoneStat, type);
-            renderHistoryTable(currentHistory, type);
+            // 第一批：纯文字统计（不依赖 Chart.js），立刻可读
+            try {
+                renderProbability(currentType);
+                renderHotCold(zs);
+                renderCrossAnalysis(zs);
+                renderMissingValues(zs);
+            } catch (e) { console.warn('[pro] 统计区块渲染失败', e); }
 
-            // 生成统计模型参考组合
-            generateRecommendation();
-            try { renderSimple(); } catch (e) { }     // 简单版同步刷新（推荐号码 / 最近一期 / 历史 100 期）
+            // 第二批：历史表
+            scheduleTask('pro-history', function () {
+                try { renderHistoryTable(currentHistory, currentType); } catch (e) { }
+            });
+
+            // 第三批：图表（需要 Chart.js）
+            scheduleTask('pro-charts', function () {
+                ensureChart().then(function () { renderAllCharts(); }).catch(function () { });
+            });
+
+            PRO_RENDERED = true;
+        }
+
+        // 首屏其余区块先放「加载中」，避免空白或跳到旧数据
+        function paintLazyPlaceholders() {
+            lazyHint('probability-grid');
+            lazyHintRow('history-tbody', 8);
+            lazyHintRow('simp-hist-tbody', 6);
+        }
+
+        // ==================== 主更新函数 ====================
+        // 只保证「本期开奖 + 推荐号码」尽快出现，其余全部延后。
+        function updateLottery(type) {
+            currentType = type;
+            currentHistory = getRealHistory(type);  // 使用真实数据
+            ZONESTAT_CACHE = null; ZONESTAT_TYPE = null;
+            PRO_RENDERED = false;
+            VIEW_DIRTY.pro = true;
+            VIEW_DIRTY.notify = true;
+            SIMP_HIST_DONE = false;
+            SIMP_HIST_PENDING = false;
+
+            // ── 阶段 1：本期开奖（最轻，同步，先画出来）──
+            try { renderLatestDraw(type, currentHistory); } catch (e) { }
+            try { renderSimpLatest(); } catch (e) { }
+
+            // 其余区块占位
+            paintLazyPlaceholders();
+
+            // ── 阶段 2：推荐号码（有回测成本，紧随其后）──
+            // 等浏览器先把开奖号码画出来，再算推荐，避免开奖也跟着变慢
+            afterPaint(function () {
+                generateRecommendation();
+                try { renderSimple(); } catch (e) { }
+            });
+
+            // ── 阶段 3：当前不在专业版，就不渲染专业版（切过去时再算）──
+            if (currentViewName() === 'pro') { VIEW_DIRTY.pro = false; renderProPane(); }
         }
 
         // =====================================================================
@@ -8948,6 +9127,11 @@
         // =====================================================================
         const TK_TYPE_NAMES = { ssq: '双色球', dlt: '大乐透', kl8: '快乐8', fc3d: '福彩3D', qlc: '七乐彩', pl3: '排列3' };
         const VIEW_KEY = 'LA_VIEW_V1';
+        let CURRENT_VIEW = 'simple';
+        let SIMP_HIST_DONE = false;      // 简单版 100 期历史表是否已渲染（按彩种重置）
+        let SIMP_HIST_PENDING = false;   // 是否已排队渲染，避免重复排队
+
+        function currentViewName() { return CURRENT_VIEW; }
 
         function switchView(v) {
             document.querySelectorAll('.view-btn').forEach(b => {
@@ -8958,9 +9142,18 @@
             });
             const sel = document.getElementById('lottery-selector');
             if (sel) sel.style.display = (v === 'notify') ? 'none' : 'flex';
+            CURRENT_VIEW = v;
             try { localStorage.setItem(VIEW_KEY, v); } catch (e) { }
             if (v === 'simple') { try { renderSimple(); } catch (e) { } }
-            if (v === 'notify') { try { renderNotifyPane(); } catch (e) { } }
+            // 专业版：第一次切过来才整块渲染（这是「次要信息」的大头）
+            if (v === 'pro' && VIEW_DIRTY.pro) {
+                VIEW_DIRTY.pro = false;
+                renderProPane();
+            }
+            if (v === 'notify') {
+                if (VIEW_DIRTY.notify) { VIEW_DIRTY.notify = false; }
+                try { renderNotifyPane(); } catch (e) { }
+            }
             try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch (e) { }
         }
 
@@ -9121,7 +9314,18 @@
         function renderSimple() {
             renderSimpRec();
             renderSimpLatest();
-            renderSimpHist();
+            // 100 期历史表属于次要信息：首屏只放一行占位，空闲时再渲染
+            if (SIMP_HIST_DONE) { try { renderSimpHist(); } catch (e) { } return; }
+            if (SIMP_HIST_PENDING) return;
+            SIMP_HIST_PENDING = true;
+            lazyHintRow('simp-hist-tbody', 6, '历史开奖数据加载中…');
+            const t = currentType;
+            scheduleTask('simp-hist', function () {
+                SIMP_HIST_PENDING = false;
+                if (t !== currentType) return;
+                try { renderSimpHist(); } catch (e) { }
+                SIMP_HIST_DONE = true;
+            });
         }
 
         // =====================================================================
@@ -10147,8 +10351,11 @@
 
             // 三大页签：恢复上次停留的页签
             try { initViewTabs(); } catch (e) { }
-            // 中奖录入 / 提醒：初始化表单与定时器
-            try { renderNotifyPane(); } catch (e) { }
+            // 中奖录入 / 提醒属于「非首屏」内容：表单、定时器、本地票夹都在空闲时再初始化
+            scheduleTask('notify-pane', function () {
+                if (currentViewName() === 'notify') return;   // 已在这个页签，switchView 会渲染
+                try { renderNotifyPane(); } catch (e) { }
+            });
             try {
                 setInterval(tickCountdownSched, 1000);      // 开奖倒计时
                 // 仅保留页面打开时的本地数据刷新，不申请系统通知权限。
