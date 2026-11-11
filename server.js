@@ -68,6 +68,24 @@ console.log = (...args) => {
   } catch (e) { /* 写日志失败不影响主流程 */ }
 };
 
+const consoleError = console.error.bind(console);
+console.error = (...args) => {
+  consoleError(...args);
+  try {
+    if (logStream) logStream.write('[' + new Date().toLocaleString('zh-CN') + '] [ERROR] ' + args.join(' ') + '\n');
+  } catch (e) { /* ignore */ }
+};
+
+// 后台/计划任务运行时没有终端：未捕获异常必须留下痕迹，并主动退出，
+// 这样探测式看门狗才能在下一轮把服务拉起来（进程僵着不响应时最麻烦）。
+function fatal(kind, err) {
+  const detail = err && (err.stack || err.message || String(err)) || 'unknown';
+  console.error('[FATAL] ' + kind + ' ' + detail);
+  setTimeout(() => process.exit(1), 300);
+}
+process.on('uncaughtException', e => fatal('uncaughtException', e));
+process.on('unhandledRejection', e => fatal('unhandledRejection', e));
+
 const PORT = Number(process.argv[2] || process.env.PORT || 8080);
 const REFRESH_MS = Number(process.env.REFRESH_MIN || 60) * 60 * 1000;
 const FETCH_COUNT = Number(process.env.FETCH_COUNT || 300);   // 默认拉 300 期（分析窗口 30/50/100 需要足够样本）
@@ -451,7 +469,15 @@ async function refreshAll(reason, onlyTypes) {
 // ==================== HTTP 服务 ====================
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'application/javascript; charset=utf-8', '.json': 'application/json; charset=utf-8', '.css': 'text/css; charset=utf-8', '.ico': 'image/x-icon' };
 
-// 把最新数据注入首页 HTML 的内嵌快照（REAL_DATA + SNAPSHOT_AT）。
+// 与 cf-worker/worker.js、scripts/refresh_snapshot.js 使用同一时间格式（Asia/Shanghai）。
+function stampCST(ts) {
+  const d = new Date(ts + 8 * 3600 * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return d.getUTCFullYear() + '/' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + ' '
+    + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+}
+
+// 把最新数据注入首页 HTML 的内嵌快照（REAL_DATA + SNAPSHOT_AT + 静态徽标）。
 // 与 cf-worker/worker.js 中同名逻辑保持一致；任何异常都返回 null（调用方回退原 HTML）。
 function injectSnapshot(htmlText, payload) {
   try {
@@ -476,7 +502,14 @@ function injectSnapshot(htmlText, payload) {
     if (end < 0) return null;
     let out = htmlText.slice(0, start) + 'const REAL_DATA = ' + JSON.stringify(payload.data) + htmlText.slice(end + 1);
     const at = payload.updatedAt || Date.now();
+    const stamp = stampCST(at);
     out = out.replace(/const SNAPSHOT_AT = \d+;/, 'const SNAPSHOT_AT = ' + at + ';');
+    // 静态徽标与注释里的构建时间同步滚动，避免 JS 执行前首屏停在旧日期
+    out = out.replace(
+      /(<span id="live-badge"[^>]*>\s*\n\s*)📡[^\n<]*/,
+      '$1📡 数据更新于 ' + stamp
+    );
+    out = out.replace(/(导出于 )\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}/, '$1' + stamp);
     return out;
   } catch (e) {
     return null;

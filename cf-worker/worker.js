@@ -265,6 +265,15 @@ async function getMeta(env) {
 // 把 KV 里的最新数据直接替换进首页 HTML 的内嵌快照（REAL_DATA + SNAPSHOT_AT），
 // 首次打开（尤其微信内置浏览器/弱网，/api/data 拉不到时）也能直接看到最新开奖，
 // 徽标时间同样是最新，不会停留在构建时的旧快照。注入失败一律回退原静态页。
+// 与 scripts/refresh_snapshot.js 的 zh-CN 时间格式保持一致（Asia/Shanghai，月/日不补零）。
+// Worker 运行在其他时区，不能用本地 toLocaleString，否则首屏时间会差 8 小时。
+function stampCST(ts) {
+  const d = new Date(ts + 8 * 3600 * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return d.getUTCFullYear() + '/' + (d.getUTCMonth() + 1) + '/' + d.getUTCDate() + ' '
+    + p(d.getUTCHours()) + ':' + p(d.getUTCMinutes()) + ':' + p(d.getUTCSeconds());
+}
+
 function injectSnapshot(htmlText, payload) {
   try {
     if (!payload || !payload.data || !Object.keys(payload.data).length) return null;
@@ -288,7 +297,16 @@ function injectSnapshot(htmlText, payload) {
     if (end < 0) return null;
     let out = htmlText.slice(0, start) + 'const REAL_DATA = ' + JSON.stringify(payload.data) + htmlText.slice(end + 1);
     const at = payload.updatedAt || Date.now();
+    const stamp = stampCST(at);
     out = out.replace(/const SNAPSHOT_AT = \d+;/, 'const SNAPSHOT_AT = ' + at + ';');
+    // 静态徽标与注释里的构建时间也要一起滚动：
+    // JS 执行前那一瞬间（以及脚本被拦截时）首屏显示的就是这段文字，
+    // 只换 SNAPSHOT_AT 会让页面始终停留在首次构建那天的日期。
+    out = out.replace(
+      /(<span id="live-badge"[^>]*>\s*\n\s*)📡[^\n<]*/,
+      '$1📡 数据更新于 ' + stamp
+    );
+    out = out.replace(/(导出于 )\d{4}\/\d{1,2}\/\d{1,2} \d{1,2}:\d{2}:\d{2}/, '$1' + stamp);
     return out;
   } catch (e) {
     return null;
